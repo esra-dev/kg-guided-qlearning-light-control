@@ -1,0 +1,673 @@
+"""Aggregate Phase-2 fault-recovery results into a CI table and paired tests.
+
+Phase 2 studies fault detection, blacklisting and re-learning of one
+Q-learning BDI agent after an actuator or sensor in the lab is broken. Each
+faulty profile x adapt-mode cell writes a one-row-per-run CSV:
+
+    recovery_stereotypes_<true|false><qtable_suffix>.csv
+        DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,
+        SecondaryDetectEpisode,RecoveredGoalRate
+
+where <true> == ql_true (agent primed with the knowledge graph) and <false> ==
+ql_false (tabula-rasa learner). RecoveryEpisodes = ReconvergeEpisode -
+DetectEpisode (lower means faster re-alignment after the fault); -1 means "did
+not re-converge within the budget" or a degenerate single-actuator lab (e.g.
+lab1_f1dead) where the last actuator is protected from blacklisting.
+RecoveredGoalRate is the fraction of greedy (epsilon=0) evaluation episodes in
+which the FINAL policy reaches the goal: it separates a policy that merely
+STOPPED CHANGING (stable) from one that actually REACHES the goal
+(goal-reaching).
+
+The headline Phase-2 hypothesis is recovery(ql_true) < recovery(ql_false): the
+knowledge-graph prior lets the agent re-align over the surviving components
+faster than a learner that must rediscover structure from scratch. The
+recovery-SPEED contrast is only well posed where a deterministic post-fault
+survivor path exists (see _WELL_POSED_RECOVERY); ill-posed cells (lone
+actuator / sun-gated survivor) are reported descriptively and excluded from
+the recovery BH family, but remain in the DETECTION family.
+
+This script:
+  * discovers recovery CSVs for every configured faulty profile (root + any
+    archived seed subdirectories under --root),
+  * treats each per-seed CSV as ONE independent replica keyed by the seed
+    token in its path (pre_registration.md section 9.7: pairing is by seed
+    key, never by list position),
+  * reports per (profile, arm) mean + bootstrap 95% CI for RecoveryEpisodes and
+    DetectEpisode, plus detection/reconvergence rates,
+  * runs a paired bootstrap (ql_true - ql_false) per profile, pairing
+    ql_true/ql_false by seed and emitting a seeds_paired column, with
+    Benjamini-Hochberg q-values over the frozen section 9.5/9.6 families
+    (reusing the helpers and RNG seed 0xC1 of sweep_report.py).
+
+The BH families are frozen by enumeration in pre_registration.md section 9
+(recovery m=8 Tier-1 cells, detection m=8 non-degenerate cells; cells with
+DetectEpisode == 0 in every run are excluded from the detection family).
+This script computes no q-values (the q_bootstrap_bh column is always nan): a
+single run carries no confirmatory claim (section 9.8). The pooled,
+registered analysis of the corrected protocol-v2 campaigns is in
+phase2_v2_registered_family.py and phase2_lowsun_v3_family.py.
+
+The two differ in how they treat a run that never re-converges: this script
+leaves such a run out of the recovery means and of the paired differences
+(only values >= 0 enter), while the registered scripts count it as censored at
+the fault-stage budget plus one episode. The tables written here are therefore
+a per-run overview for the workflow log; the accepted Phase-2 results are the
+tables of the registered scripts.
+
+Status: aggregation step of the Phase-2 workflow (.github/workflows/phase2.yml).
+
+Outputs (under --out, default analysis/out/):
+    phase2_recovery_ci.csv      -- one row per (profile, arm)
+    phase2_recovery_paired.csv  -- one row per (profile, metric) paired diff
+
+Usage (as in the workflow):
+    python analysis/phase2_recovery.py --root recovery_root --out analysis/out
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import re
+import sys
+from pathlib import Path
+
+# Reuse the statistical helpers of sweep_report.py (deterministic RNG seed
+# 0xC1, bootstrap CIs, paired bootstrap diff, Wilcoxon, Cliff's delta,
+# BH-FDR) so the Phase-2 numbers use the same methodology as the Phase-1
+# sweep. The import has no side effects: sweep_report guards its CLI behind
+# __main__.
+_HERE = Path(__file__).resolve().parent
+if str(_HERE.parent) not in sys.path:
+    sys.path.insert(0, str(_HERE.parent))
+try:
+    from analysis.sweep_report import (  # type: ignore
+        _bootstrap_ci, _paired_bootstrap_diff, _wilcoxon_p,
+        _cliffs_delta,
+    )
+except Exception:  # pragma: no cover - fallback when run outside the package
+    from sweep_report import (  # type: ignore
+        _bootstrap_ci, _paired_bootstrap_diff, _wilcoxon_p,
+        _cliffs_delta,
+    )
+
+# adapt-mode -> the boolean string embedded in the artefact filename.
+_ARMS = (("ql_true", "true"), ("ql_false", "false"))
+
+# Metrics compared per profile. Both are "lower is better".
+_METRICS = ("RecoveryEpisodes", "DetectEpisode")
+
+# Cells where a DETERMINISTIC post-fault survivor path exists, so "does the KG
+# recover faster?" is well posed: a fixed greedy policy can actually reach the
+# goal after the fault (lab3 keeps the shared Spotlight +150 to both zones plus
+# the cross-zone lamp bleed, reaching rank 3 without relying on the stochastic
+# sun). Only these enter the RecoveryEpisodes BH family. Everywhere else the
+# lone actuator is protected (lab1_f1dead) or the only survivor is the sun-gated
+# blind (lab2_*, lab3_f2*), so a *stable* greedy policy need not be
+# *goal-reaching* and a recovery-SPEED comparison is ill posed. Ill-posed cells
+# are still reported descriptively and stay in the DETECTION family.
+#
+# Further well-posed cells:
+#   - lab3_f1dead_z2 / lab3_f1inv_z2: symmetric Z2-lamp faults; the target zone
+#     is still reachable deterministically via the shared Spotlight + surviving
+#     lamp cross-zone spill (same argument as lab3_f1dead/f1inv).
+#   - lab3_f1bdead / lab3_f1binv / lab2_f1bdead / lab2_f1binv: BLIND (Mediates)
+#     faults. After the blind is blacklisted the TASK LAMP survives as a
+#     deterministic rank-3 lever (lab2: +400; lab3: +400 own + spotlight/spill),
+#     so the recovered greedy policy is genuinely goal-reaching (sun-independent)
+#     and a recovery-SPEED contrast is well posed. (lab2 LAMP faults stay ill
+#     posed because there the only survivor is the sun-gated blind; a lab2 BLIND
+#     fault is the reverse, the lamp survives, hence well posed.)
+_WELL_POSED_RECOVERY = (
+    "lab3_f1dead", "lab3_f1inv",
+    "lab3_f1dead_z2", "lab3_f1inv_z2",
+    "lab3_f1bdead", "lab3_f1binv",
+    "lab2_f1bdead", "lab2_f1binv",
+    # Exploratory multi-blind cell (registered post-hoc in pre_registration.md
+    # section 9.11). BOTH lab3 blinds dead (own 0.50*sun + cross 0.30*sun
+    # zeroed each); survivors Z1Light, Z2Light, Spotlight keep both zones
+    # deterministically rank-3 reachable (25+400+100+150), so a recovery-SPEED
+    # contrast is well posed -- the first well-posed MULTI-fault cell (the lamp
+    # f2* cells leave only sun-gated survivors). NOT a member of the frozen
+    # section 9.5/9.6 families (_REGISTERED_* below): paired statistics are
+    # reported, but q_bootstrap_bh stays nan by construction (no confirmatory
+    # claim).
+    "lab3_f2bdead",
+    # Monitor emergency-fallback lab. The primary lamp is the ONLY rank-3 lever,
+    # so once it is blacklisted the nominal goal (rank 3) is UNREACHABLE. The
+    # adapt agent proves this with a deterministic reachability probe, lowers
+    # the EFFECTIVE goal to the closest achievable rank (rank 2 via the monitor,
+    # 25+260=285 lux, sun-independent) and notifies the occupant. The recovery-SPEED
+    # contrast is well posed against that effective best-effort goal:
+    # RecoveredGoalRate here measures best-effort (rank-2) attainment.
+    "labmon_f1dead",
+    # lab3 MULTI-SURVIVOR degraded cell. BOTH task lamps are dead and the sun is
+    # pinned to rank 1 (100 lux), so the nominal rank-3 goal is UNREACHABLE in
+    # BOTH zones on every episode (per-zone ceiling 25 + spotlight 150 + blinds
+    # 50+40 = 265 = rank 2). After the two lamps are blacklisted the survivors
+    # are Z1Blinds, Z2Blinds and the Spotlight (3 actuators), so the
+    # reachability probe has 8 combos and BOTH zones degrade to rank 2. Unlike
+    # labmon (single survivor), the Spotlight, redundant in the clean lab,
+    # becomes the essential best-effort lever, giving the KG's structural prior
+    # a multi-actuator triage where a recovery-SPEED contrast can show up.
+    "lab3_f2dead_lowsun",
+    # labmon2 DUAL-ZONE MULTI-SURVIVOR monitor fallback (no spotlight). BOTH
+    # primary lamps are dead and the sun is pinned to rank 1 (100 lux), so the
+    # nominal rank-3 goal is UNREACHABLE in BOTH zones on every episode (per-zone
+    # ceiling 25 + monitor 200 + blind 50 = 275 = rank 2). After the two lamps
+    # are blacklisted the survivors are Z1Monitor, Z2Monitor, Z1Blinds, Z2Blinds
+    # (4 actuators -> 16 probe combos), and BOTH zones degrade to rank 2. The
+    # MONITOR (Causes light, rank 2 alone) is the essential best-effort lever in
+    # each zone, giving the KG's structural prior a multi-actuator triage
+    # without a spotlight.
+    "labmon2_f2dead_lowsun",
+)
+
+# Minimum greedy goal-rate (RecoveredGoalRate) for a re-converged policy to
+# count as goal-reaching rather than merely stable.
+_GOAL_REACHING_THRESHOLD = 0.5
+
+# ---------------------------------------------------------------------------
+# Frozen registration (pre_registration.md section 9). The BH families below
+# are frozen BY ENUMERATION: m never changes with the data, and a cell whose
+# realized tier flips is kept in the family and reported as a deviation
+# (sections 9.5/9.6). Do not edit without a registered amendment.
+# ---------------------------------------------------------------------------
+
+# Section 9.5: the ONE pooled Tier-1 RecoveryEpisodes family (m = 8).
+_REGISTERED_TIER1_FAMILY = (
+    "lab3_f1dead", "lab3_f1dead_z2", "lab3_f1bdead", "lab3_f1binv",
+    "lab2_f1bdead", "labmon_f1dead", "lab3_f2dead_lowsun",
+    "labmon2_f2dead_lowsun",
+)
+
+# Section 9.6: the DetectEpisode family (m = 8): cells whose DetectEpisode is NOT
+# identically 0 in both arms. Degenerate instant-detection cells (DetectEpisode
+# == 0 for every replica in both arms) are a constant, not evidence of parity,
+# and are excluded (reported descriptively only).
+_REGISTERED_DETECTION_FAMILY = (
+    "lab3_f1dead", "lab3_f1inv", "lab3_f1dead_z2", "lab3_f1inv_z2",
+    "lab3_f1bdead", "lab3_f1binv", "lab2_f1bdead", "lab2_f1binv",
+)
+
+_METRIC_FAMILY = {
+    "RecoveryEpisodes": _REGISTERED_TIER1_FAMILY,
+    "DetectEpisode": _REGISTERED_DETECTION_FAMILY,
+}
+
+# Seed token from a path component (section 9.7). Same idea as
+# phase4_energy.py::_seed_token, widened to the layouts Phase-2 artefacts use:
+# seed3, results_seed3, adapt-<profile>-<mode>-seed-3.
+_SEED_RE = re.compile(r"seed[._-]?(\d+)$", re.IGNORECASE)
+
+
+def _seed_token(path: Path) -> str:
+    """Return "seed<N>" from the first path component containing a seed token,
+    or "root" if the path carries none."""
+    for part in path.parts:
+        m = _SEED_RE.search(part)
+        if m:
+            return f"seed{m.group(1)}"
+    return "root"
+
+
+def _seed_sort_key(tok: str):
+    """Sort key placing seed<N> tokens in numeric order, other tokens after them."""
+    m = re.fullmatch(r"seed(\d+)", tok)
+    return (0, int(m.group(1))) if m else (1, tok)
+
+
+# ---------------------------------------------------------------------------
+# Two-tier recovery reporting.
+#
+# _WELL_POSED_RECOVERY gates whether a recovery-SPEED contrast is *defined* (a
+# deterministic post-fault survivor path exists). Within that set we further
+# stratify by whether the recovered policy is actually GOAL-REACHING, because a
+# well-posed cell can still be futile in practice. Concretely, lab3 physics is
+#   z1 = 25 + (z1l?400) + (z2l?150) + (z1b?0.5*sun) + (z2b?0.4*sun) + (sp?150)
+# so after a DEAD Z1 lamp is blacklisted, {Z2Light,Spotlight} still gives
+# z1 = 25+150+150 = 325 > 300 = rank 3 (sun-independent) -> both arms reach goal
+# (~0.9-1.0). An INVERTED Z1 lamp has the SAME survivor path on paper, but its
+# -400 contribution keeps dragging the zone in the states the re-learner
+# revisits, so NEITHER arm reliably reaches the goal (~0.3). A BLIND fault
+# leaves the deterministic +400 task lamp, so both arms reach goal.
+#
+# Tier-1 (CONFIRMATORY): well-posed AND goal-reaching in BOTH arms
+#   (per-arm goal_reaching_rate >= _GOAL_REACHING_THRESHOLD). "Recovered" here
+#   means "re-reaches the target", so a recovery-SPEED comparison is meaningful.
+#   The RecoveryEpisodes BH-FDR family is restricted to these cells.
+# Tier-2 (DESCRIPTIVE): well-posed but NOT reliably goal-reaching in both arms
+#   (the inverted-lamp cells; partially-posed lab2_f1binv). Reported with full
+#   statistics but EXCLUDED from the recovery BH family -- their number is
+#   time-to-stable-but-futile-policy, not time-to-recovery.
+#
+# The stratifier is task ACHIEVABILITY, a property of the ENVIRONMENT: it agrees
+# across both arms (ql_true and ql_false classify identically), so conditioning
+# on it does NOT bias the KG-vs-vanilla contrast (it is not a treatment
+# selector). Cells outside _WELL_POSED_RECOVERY are 'ill_posed'.
+def classify_recovery_tier(profile: str, per_cell: dict) -> str:
+    """'confirmatory' | 'descriptive' | 'ill_posed' for a profile."""
+    if profile not in _WELL_POSED_RECOVERY:
+        return "ill_posed"
+    t = per_cell.get((profile, "ql_true"))
+    f = per_cell.get((profile, "ql_false"))
+    grt = t["goal_reaching_rate"] if t else float("nan")
+    grf = f["goal_reaching_rate"] if f else float("nan")
+    both_goal = (grt == grt and grf == grf
+                 and grt >= _GOAL_REACHING_THRESHOLD
+                 and grf >= _GOAL_REACHING_THRESHOLD)
+    return "confirmatory" if both_goal else "descriptive"
+
+
+def load_phase2_config(cfg_path: Path) -> dict:
+    """Return the phase2 block from run_config.json (suffix map + profiles)."""
+    if not cfg_path.is_file():
+        raise SystemExit(f"Missing config: {cfg_path}")
+    # utf-8-sig transparently strips a UTF-8 BOM if present (run_config.json is
+    # BOM-encoded so the PowerShell runners parse it under Windows PS 5.1).
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8-sig"))
+    p2 = cfg.get("phase2")
+    if not p2:
+        raise SystemExit(f"{cfg_path} has no 'phase2' block")
+    return p2
+
+
+def find_recovery_rows(root: Path, bool_str: str, suffix: str) -> list[tuple[str, dict]]:
+    """(seed_token, row) replicas from recovery_stereotypes_<bool><suffix>.csv.
+
+    Searches the root directory and (recursively) any archived seed
+    subdirectories. One replica per (run, seed) -- pre_registration.md §9.7:
+    the seed token comes from the artefact path, duplicate copies of the same
+    seed under one root (e.g. a consolidated recovery_root/ next to raw
+    adapt-*-seed-N artefact dirs) are dropped with a warning, and a multi-row
+    CSV keeps only its first row.
+    """
+    fname = f"recovery_stereotypes_{bool_str}{suffix}.csv"
+    paths = []
+    direct = root / fname
+    if direct.is_file():
+        paths.append(direct)
+    # Archived/seeded copies (e.g. phase2_seed3/recovery_*.csv). Avoid double-
+    # counting the direct hit.
+    for p in sorted(root.rglob(fname)):
+        if p.resolve() != direct.resolve():
+            paths.append(p)
+
+    out: list[tuple[str, dict]] = []
+    seen: set[str] = set()
+    for p in paths:
+        tok = _seed_token(p.relative_to(root) if p.is_relative_to(root) else p)
+        if tok in seen:
+            print(f"  [!!] duplicate replica {tok} for {fname} at {p}; "
+                  f"keeping first occurrence", file=sys.stderr)
+            continue
+        try:
+            with p.open(encoding="utf-8") as fh:
+                rows = list(csv.DictReader(fh))
+        except Exception as exc:  # noqa: BLE001 - best-effort aggregation
+            print(f"  [!!] could not read {p}: {exc}", file=sys.stderr)
+            continue
+        if not rows:
+            continue
+        if len(rows) > 1:
+            print(f"  [!!] {p} has {len(rows)} rows; keeping the first "
+                  f"(one replica per (run, seed), §9.7)", file=sys.stderr)
+        seen.add(tok)
+        out.append((tok, rows[0]))
+    return out
+
+
+def _as_int(row: dict, key: str):
+    """Parse row[key] as an int, or None if missing, blank or not numeric."""
+    raw = row.get(key)
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return int(float(str(raw).strip()))
+    except ValueError:
+        return None
+
+
+def _as_float(row: dict, key: str):
+    """Parse row[key] as a float, or None if missing, blank or not numeric."""
+    raw = row.get(key)
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return float(str(raw).strip())
+    except ValueError:
+        return None
+
+
+def collect_arm(replicas: list[tuple[str, dict]]) -> dict:
+    """Reduce (seed, row) replicas of one arm into metric lists, per-seed maps and rates.
+
+    Episode metrics are "success-only": entries below 0 (not detected, not
+    re-converged) are dropped from the CI lists and per-seed maps, but counted
+    in the rates, whose denominator is all runs. goal_reaching_rate counts runs
+    that re-converged AND whose final greedy goal-rate is >=
+    _GOAL_REACHING_THRESHOLD. Degradation columns are absent in older CSVs.
+    """
+    rows = [r for _, r in replicas]
+    # Per-seed success-filtered metric maps: the section 9.7 pairing structures.
+    detect_by_seed: dict[str, float] = {}
+    recovery_by_seed: dict[str, float] = {}
+    for seed, r in replicas:
+        d = _as_int(r, "DetectEpisode")
+        v = _as_int(r, "RecoveryEpisodes")
+        if d is not None and d >= 0:
+            detect_by_seed[seed] = float(d)
+        if v is not None and v >= 0:
+            recovery_by_seed[seed] = float(v)
+
+    detect_all = [_as_int(r, "DetectEpisode") for r in rows]
+    recov_all = [_as_int(r, "ReconvergeEpisode") for r in rows]
+    recovery_all = [_as_int(r, "RecoveryEpisodes") for r in rows]
+    goalrate_all = [_as_float(r, "RecoveredGoalRate") for r in rows]
+    # Graceful-degradation columns (absent on older CSVs -> None).
+    degraded_all = [_as_int(r, "DegradedMode") for r in rows]
+    best_effort_all = [_as_int(r, "BestEffortRank") for r in rows]
+    nominal_all = [_as_int(r, "NominalGoal") for r in rows]
+    defects = sorted({(r.get("DefectComponent") or "").strip()
+                      for r in rows if (r.get("DefectComponent") or "").strip()})
+
+    n_runs = len(rows)
+    # Detection succeeded when DetectEpisode >= 0.
+    detected = [d for d in detect_all if d is not None and d >= 0]
+    # Re-convergence succeeded when RecoveryEpisodes >= 0 (>=0 implies both
+    # detect and reconverge episodes were recorded).
+    reconverged = [v for v in recovery_all if v is not None and v >= 0]
+    # Greedy goal-rate of the FINAL policy (>=0; -1 == not measured).
+    goal_rates = [g for g in goalrate_all if g is not None and g >= 0.0]
+    # Goal-reaching recovery == re-converged AND final greedy policy reaches the
+    # goal at >= threshold (separates "stable" from "stable AND goal-reaching").
+    goal_reaching = [
+        v for v, g in zip(recovery_all, goalrate_all)
+        if v is not None and v >= 0
+        and g is not None and g >= _GOAL_REACHING_THRESHOLD
+    ]
+
+    # Best-effort degradation summary. A cell is "degraded" when the
+    # adapt agent proved the nominal goal unreachable and lowered the effective
+    # goal. best_effort_rank / nominal_goal report the (modal) ranks involved.
+    degraded_flags = [d for d in degraded_all if d is not None]
+    n_degraded = sum(1 for d in degraded_flags if d == 1)
+    best_efforts = [b for b, d in zip(best_effort_all, degraded_all)
+                    if d == 1 and b is not None]
+    nominals = [n for n in nominal_all if n is not None]
+    _mode = lambda xs: max(set(xs), key=xs.count) if xs else None
+
+    return {
+        "n_runs": n_runs,
+        "defects": defects,
+        # Per-metric value lists used for CIs (success-only).
+        "DetectEpisode": detected,
+        "RecoveryEpisodes": reconverged,
+        # Per-seed success-only maps used for PAIRING (section 9.7, seed-keyed).
+        "DetectEpisode_by_seed": detect_by_seed,
+        "RecoveryEpisodes_by_seed": recovery_by_seed,
+        "n_detected": len(detected),
+        "n_reconverged": len(reconverged),
+        "detection_rate": (len(detected) / n_runs) if n_runs else float("nan"),
+        "reconverge_rate": (len(reconverged) / n_runs) if n_runs else float("nan"),
+        "_reconverge_episodes": [v for v in recov_all if v is not None and v >= 0],
+        # Goal-rate certification.
+        "RecoveredGoalRate": goal_rates,
+        "goal_rate_mean": (sum(goal_rates) / len(goal_rates)) if goal_rates else float("nan"),
+        "n_goal_reaching": len(goal_reaching),
+        "goal_reaching_rate": (len(goal_reaching) / n_runs) if n_runs else float("nan"),
+        # Best-effort degradation summary.
+        "n_degraded": n_degraded,
+        "degraded_rate": (n_degraded / n_runs) if n_runs else float("nan"),
+        "best_effort_rank": _mode(best_efforts),
+        "nominal_goal": _mode(nominals),
+    }
+
+
+def write_ci_table(per_cell: dict, out_dir: Path, iters: int) -> int:
+    """phase2_recovery_ci.csv: one row per (profile, arm)."""
+    rows = []
+    for (profile, mode), arm in sorted(per_cell.items()):
+        row = {
+            "profile": profile,
+            "mode": mode,
+            "n_runs": arm["n_runs"],
+            "source_run": arm.get("source", ""),
+            "defect_component": ";".join(arm["defects"]) if arm["defects"] else "",
+            "well_posed_recovery": profile in _WELL_POSED_RECOVERY,
+            "recovery_tier": classify_recovery_tier(profile, per_cell),
+            "detection_rate": round(arm["detection_rate"], 4)
+                if arm["detection_rate"] == arm["detection_rate"] else "",
+            "reconverge_rate": round(arm["reconverge_rate"], 4)
+                if arm["reconverge_rate"] == arm["reconverge_rate"] else "",
+            "n_detected": arm["n_detected"],
+            "n_reconverged": arm["n_reconverged"],
+            "greedy_goal_rate_mean": round(arm["goal_rate_mean"], 4)
+                if arm["goal_rate_mean"] == arm["goal_rate_mean"] else "",
+            "n_goal_reaching": arm["n_goal_reaching"],
+            "goal_reaching_rate": round(arm["goal_reaching_rate"], 4)
+                if arm["goal_reaching_rate"] == arm["goal_reaching_rate"] else "",
+            # Best-effort degradation (blank when no cell degraded).
+            "degraded_rate": round(arm["degraded_rate"], 4)
+                if arm["degraded_rate"] == arm["degraded_rate"] else "",
+            "n_degraded": arm["n_degraded"],
+            "best_effort_rank": arm["best_effort_rank"]
+                if arm["best_effort_rank"] is not None else "",
+            "nominal_goal": arm["nominal_goal"]
+                if arm["nominal_goal"] is not None else "",
+        }
+        for metric in _METRICS:
+            mean, lo, hi = _bootstrap_ci(
+                [float(v) for v in arm[metric]], iters=iters)
+            row[f"{metric}_mean"] = mean
+            row[f"{metric}_ci_lo"] = lo
+            row[f"{metric}_ci_hi"] = hi
+        rows.append(row)
+
+    out_path = out_dir / "phase2_recovery_ci.csv"
+    if not rows:
+        out_path.write_text("", encoding="utf-8")
+        return 0
+    cols = list(rows[0].keys())
+    with out_path.open("w", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols)
+        w.writeheader()
+        w.writerows(rows)
+    return len(rows)
+
+
+def write_paired_table(per_cell: dict, profiles: list[str],
+                       out_dir: Path, iters: int) -> int:
+    """phase2_recovery_paired.csv: ql_true vs ql_false per profile x metric.
+
+    Pairs replicas BY SEED KEY (pre_registration.md §9.7): seed s of ql_true
+    vs seed s of ql_false, over the seeds valid in both arms; the seeds used
+    are emitted in seeds_paired. mean_diff < 0 means ql_true is FASTER (fewer
+    episodes) -- the headline direction. Rows are EMITTED for every well-posed
+    recovery cell and every detection cell, but Benjamini-Hochberg q-values
+    are computed ONLY over the frozen §9.5/§9.6 enumerated families (recovery
+    m=8 Tier-1 cells; detection m=8 non-degenerate cells), and ONLY when every
+    family member is present -- a partial invocation (single CI run) emits
+    q=nan and carries no confirmatory claim (§9.8). Tier-2 DESCRIPTIVE and
+    ill-posed/degenerate cells carry no q-value. The per-row recovery_tier
+    column records the realized classification; a registered cell whose
+    realized tier deviates stays in the family (m frozen) and is flagged.
+    """
+    rows: list[dict] = []
+    # metric -> list of (row_idx, p_value, profile) for registered family rows
+    metric_pidx: dict = {}
+
+    for metric in _METRICS:
+        metric_pidx.setdefault(metric, [])
+        for profile in profiles:
+            # Recovery-SPEED is only DEFINED on well-posed cells (a deterministic
+            # post-fault survivor exists); detection rows are emitted everywhere.
+            if metric == "RecoveryEpisodes" and profile not in _WELL_POSED_RECOVERY:
+                continue
+            ta = per_cell.get((profile, "ql_true"))
+            fa = per_cell.get((profile, "ql_false"))
+            if not ta or not fa:
+                continue
+            tmap = ta[f"{metric}_by_seed"]
+            fmap = fa[f"{metric}_by_seed"]
+            seeds_common = sorted(set(tmap) & set(fmap), key=_seed_sort_key)
+            n_pair = len(seeds_common)
+            if n_pair == 0:
+                continue
+            a = [tmap[s] for s in seeds_common]
+            b = [fmap[s] for s in seeds_common]
+            raw_diff = (sum(a) / len(a)) - (sum(b) / len(b))
+            if n_pair >= 2:
+                mean_d, lo, hi, p_boot, p_pos, p_neg = _paired_bootstrap_diff(
+                    a, b, iters=iters)
+                p_wil = _wilcoxon_p(a, b)
+                delta = _cliffs_delta(a, b)
+            else:
+                mean_d, lo, hi = raw_diff, float("nan"), float("nan")
+                p_boot = p_pos = p_neg = p_wil = delta = float("nan")
+            tier = (classify_recovery_tier(profile, per_cell)
+                    if metric == "RecoveryEpisodes" else "")
+            in_family = profile in _METRIC_FAMILY[metric]
+            if metric == "RecoveryEpisodes" and in_family and tier != "confirmatory":
+                print(f"  [!!] REGISTERED DEVIATION: {profile} realized tier "
+                      f"'{tier}' != confirmatory; cell stays in the frozen "
+                      f"family (m unchanged, §9.5)", file=sys.stderr)
+            if metric == "RecoveryEpisodes" and not in_family and tier == "confirmatory":
+                print(f"  [!!] {profile} classifies confirmatory but is NOT in "
+                      f"the frozen §9.5 family; no q-value emitted",
+                      file=sys.stderr)
+            row_idx = len(rows)
+            rows.append({
+                "profile": profile,
+                "metric": metric,
+                "recovery_tier": tier,
+                "in_registered_family": in_family,
+                "n_paired": n_pair,
+                "seeds_paired": ";".join(seeds_common),
+                "ql_true_mean": (sum(a) / len(a)) if a else float("nan"),
+                "ql_false_mean": (sum(b) / len(b)) if b else float("nan"),
+                "mean_diff_true_minus_false": mean_d,
+                "ci_lo": lo,
+                "ci_hi": hi,
+                "p_bootstrap": p_boot,
+                "p_bootstrap_one_sided_true_faster": p_pos,
+                "p_wilcoxon": p_wil,
+                "cliffs_delta": delta,
+                "ql_true_faster": (mean_d < 0) if mean_d == mean_d else "",
+            })
+            if in_family:
+                metric_pidx[metric].append((row_idx, p_boot, profile))
+
+    # Q-values are never computed here: the frozen families need the pooled
+    # run-of-record analysis (phase2_v2_registered_family.py), not one run.
+    for metric in metric_pidx:
+        print(f"  [--] {metric}: q_bootstrap_bh is not computed by this "
+              f"script; this run carries no confirmatory claim "
+              f"(pre_registration.md §9.8)", file=sys.stderr)
+    for r in rows:
+        r.setdefault("q_bootstrap_bh", float("nan"))
+        r.setdefault("bh_family_m", 0)
+
+    out_path = out_dir / "phase2_recovery_paired.csv"
+    if not rows:
+        out_path.write_text("", encoding="utf-8")
+        return 0
+    cols = list(rows[0].keys())
+    with out_path.open("w", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols)
+        w.writeheader()
+        w.writerows(rows)
+    return len(rows)
+
+
+def _fmt(x) -> str:
+    """Format a number for the console summary (width 6, one decimal; nan as "  nan")."""
+    if isinstance(x, float):
+        if x != x:
+            return "  nan"
+        return f"{x:6.1f}"
+    return str(x)
+
+
+def print_summary(per_cell: dict, profiles: list[str]) -> None:
+    """Print the per-profile, per-arm console table (rates in percent, mean episodes)."""
+    print("\n=== Phase 2 recovery summary (lower = faster; goal% = greedy goal-rate) ===")
+    header = (f"{'profile':<23}{'arm':<10}{'n':>3}  {'det%':>5} {'recv%':>6} "
+              f"{'goal%':>6}  {'detectEp':>9} {'recovEp':>9}  tier")
+    print(header)
+    print("-" * len(header))
+    _TIER_ABBR = {"confirmatory": "conf", "descriptive": "desc", "ill_posed": "ill"}
+    for profile in profiles:
+        tier = _TIER_ABBR.get(classify_recovery_tier(profile, per_cell), "?")
+        for mode, _bool in _ARMS:
+            arm = per_cell.get((profile, mode))
+            if not arm:
+                continue
+            det_mean, _, _ = _bootstrap_ci([float(v) for v in arm["DetectEpisode"]])
+            rec_mean, _, _ = _bootstrap_ci([float(v) for v in arm["RecoveryEpisodes"]])
+            det_pct = arm["detection_rate"] * 100 if arm["detection_rate"] == arm["detection_rate"] else float("nan")
+            rec_pct = arm["reconverge_rate"] * 100 if arm["reconverge_rate"] == arm["reconverge_rate"] else float("nan")
+            goal_pct = arm["goal_rate_mean"] * 100 if arm["goal_rate_mean"] == arm["goal_rate_mean"] else float("nan")
+            print(f"{profile:<23}{mode:<10}{arm['n_runs']:>3}  "
+                  f"{_fmt(det_pct):>5} {_fmt(rec_pct):>6} {_fmt(goal_pct):>6}  "
+                  f"{_fmt(det_mean):>9} {_fmt(rec_mean):>9}  {tier}")
+    print()
+
+
+def main(argv: list[str]) -> int:
+    """Command-line entry point: aggregate, write both CSVs, print the summary.
+
+    Returns 1 if no recovery CSV is found under --root, otherwise 0."""
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--root", default=".",
+                        help="directory holding recovery_stereotypes_*.csv (default: .)")
+    parser.add_argument("--config", default="config/run_config.json",
+                        help="run_config.json with the phase2 block")
+    parser.add_argument("--out", default="analysis/out",
+                        help="output directory (default: analysis/out)")
+    parser.add_argument("--iters", type=int, default=10000,
+                        help="bootstrap iterations (default: 10000)")
+    args = parser.parse_args(argv)
+
+    root = Path(args.root).resolve()
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    p2 = load_phase2_config(Path(args.config))
+    profiles = list(p2.get("adapt_profiles", []))
+    suffix_map = p2.get("qtable_suffix_map", {})
+
+    per_cell: dict = {}
+    found_any = False
+    for profile in profiles:
+        suffix = suffix_map.get(profile)
+        if suffix is None:
+            print(f"  [!!] no qtable_suffix for {profile}; skipping", file=sys.stderr)
+            continue
+        profile_root = root
+        for mode, bool_str in _ARMS:
+            replicas = find_recovery_rows(profile_root, bool_str, suffix)
+            if replicas:
+                found_any = True
+            arm = collect_arm(replicas)
+            arm["source"] = ""
+            per_cell[(profile, mode)] = arm
+
+    if not found_any:
+        print(f"No recovery_stereotypes_*.csv found under {root}.\n"
+              f"Run the Phase-2 orchestrator first:  .\\run_phase2_adapt.ps1",
+              file=sys.stderr)
+        return 1
+
+    n_ci = write_ci_table(per_cell, out_dir, args.iters)
+    n_paired = write_paired_table(per_cell, profiles, out_dir, args.iters)
+    print_summary(per_cell, profiles)
+    print(f"Wrote {n_ci} rows -> {out_dir / 'phase2_recovery_ci.csv'}")
+    print(f"Wrote {n_paired} rows -> {out_dir / 'phase2_recovery_paired.csv'}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

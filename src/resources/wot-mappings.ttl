@@ -1,0 +1,137 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix lab:   <http://example.org/was/lab#> .
+@prefix ws:    <http://example.org/was/lab/stereotypes#> .
+
+
+# ===========================================================================
+#  WoT mapping and state layout that complete lab-ontology.ttl.
+# ---------------------------------------------------------------------------
+#  This file belongs to no lab profile: no lab_profile(...) entry in
+#  src/agt/lab_profiles.asl names it, and no experiment loads it. It is kept
+#  together with lab-ontology.ttl as a test fixture: the unit test
+#  StereotypeReasonerOntologyLoadTest loads the pair, and the Gradle task
+#  verifyActionRegistry compares the action registry discovered from the pair
+#  (ontology set "custom" in ActionRegistryDump.java) with
+#  config/golden_registry/registry_custom.csv. The per-lab graphs
+#  (building_*.ttl) carry their own mapping and state layout.
+#
+#  Contents: the declarations of the WoT and state-layout properties, the
+#  state layout (8 entries [Z1Level, Z2Level, Z1Light, Z2Light, Z1Blinds,
+#  Z2Blinds, Spotlight, Sunshine], 4 x 4 x 2^5 x 4 = 2048 states), and the
+#  WoT action and state names of each device of lab-ontology.ttl. The two
+#  radiators have a WoT mapping but no state entry.
+# ===========================================================================
+
+# ===========================================================================
+# WoT binding properties
+# ===========================================================================
+
+ws:hasWoTActionSemanticType a owl:DatatypeProperty ;
+    rdfs:label "WoT action semantic type URI" ;
+    rdfs:comment "The @type URI of the WoT TD action affordance that actuates this component." ;
+    rdfs:range xsd:anyURI .
+
+ws:hasWoTStateSemanticType a owl:DatatypeProperty ;
+    rdfs:label "WoT state observation semantic type URI" ;
+    rdfs:comment "The WoT TD status property URI that carries this component's current boolean state." ;
+    rdfs:range xsd:anyURI .
+
+ws:stateVecIndex a owl:DatatypeProperty ;
+    rdfs:label "state vector index" ;
+    rdfs:comment "The integer index in the QLearner state vector that this slot occupies." ;
+    rdfs:range xsd:integer .
+
+ws:stateDomainSize a owl:DatatypeProperty ;
+    rdfs:label "state slot domain cardinality" ;
+    rdfs:comment "Number of distinct integer values this slot can take (e.g. 2 for booleans, 4 for 0..3 ranks)." ;
+    rdfs:range xsd:integer .
+
+ws:stateSlotRole a owl:DatatypeProperty ;
+    rdfs:label "state slot role" ;
+    rdfs:comment "Role of this slot in the state vector. One of: 'zone_level', 'boolean_actuator', 'sunshine'." ;
+    rdfs:range xsd:string .
+
+# ws:zoneIndex, used by the state layout below, is declared in
+# lab-ontology.ttl.
+
+
+# ===========================================================================
+# State layout
+# ===========================================================================
+# Every entry of the learner's state, including the entries that belong to
+# no device (the zone light ranks and the sun rank). StereotypeReasoner reads
+# the layout; QLearner derives the number of states and the position of each
+# entry from it.
+
+lab:Slot_ZoneLevel_Z1
+    ws:stateVecIndex   0 ;
+    ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "zone_level" ;
+    ws:zoneIndex       1 .
+
+lab:Slot_ZoneLevel_Z2
+    ws:stateVecIndex   1 ;
+    ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "zone_level" ;
+    ws:zoneIndex       2 .
+
+lab:Slot_Sunshine
+    ws:stateVecIndex   7 ;
+    ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "sunshine" .
+
+
+# ===========================================================================
+# WoT Action / State Mappings per Component Instance
+# ===========================================================================
+
+# --- Incandescent lamps ---
+lab:CeilingLight_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Light" ;
+    ws:stateVecIndex            2 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:CeilingLight_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Light" ;
+    ws:stateVecIndex            3 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+# --- Blinds ---
+lab:Blind_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Blinds" ;
+    ws:stateVecIndex            4 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:Blind_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Blinds" ;
+    ws:stateVecIndex            5 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+# --- Spotlight (shared) ---
+lab:Spotlight
+    ws:hasWoTActionSemanticType "http://example.org/was#SetSpotlight" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Spotlight" ;
+    ws:stateVecIndex            6 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+# --- Radiators ---
+lab:Radiator_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Radiator" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Radiator" .
+
+lab:Radiator_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Radiator" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Radiator" .

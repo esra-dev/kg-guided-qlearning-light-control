@@ -1,0 +1,209 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase2_v2_corrected",
+  "archive": "results/phase2_v2_corrected",
+  "role": "accepted",
+  "phase": "2",
+  "description": "Phase 2 corrected campaign (protocol phase2-v2, detector fault-detector-v2): four runs, two profile groups x two seed halves.",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase2.yml",
+    "workflow_note": "Every archived workflow_inputs.json of this campaign records \".github/workflows/phase1.yml\", although the runs were dispatched through workflow_actual (named in each run's ARCHIVE_MANIFEST.md). The receipt value is pinned as it is.",
+    "all_runs": {
+      "head_sha": "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9",
+      "publish_results": true,
+      "ref": "refs/heads/phase234-correction-2026-07-22",
+      "run_mode": "phase1_v2_kg_only",
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "30001857104": {
+        "profiles": [
+          "lab1_f1dead",
+          "lab2_f1dead",
+          "lab2_f1inv",
+          "lab2_f2dead",
+          "lab2_f2inv",
+          "lab2_f1bdead",
+          "lab2_f1binv",
+          "labmon_f1dead",
+          "labmon_infoonly_f1dead",
+          "labmon_nostereo_f1dead",
+          "labmon2_f2dead_lowsun",
+          "labmon2_infoonly_f2dead_lowsun"
+        ],
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "30001867521": {
+        "profiles": [
+          "lab1_f1dead",
+          "lab2_f1dead",
+          "lab2_f1inv",
+          "lab2_f2dead",
+          "lab2_f2inv",
+          "lab2_f1bdead",
+          "lab2_f1binv",
+          "labmon_f1dead",
+          "labmon_infoonly_f1dead",
+          "labmon_nostereo_f1dead",
+          "labmon2_f2dead_lowsun",
+          "labmon2_infoonly_f2dead_lowsun"
+        ],
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      },
+      "30001878310": {
+        "profiles": [
+          "lab3_f1dead",
+          "lab3_f1inv",
+          "lab3_f2dead",
+          "lab3_f2inv",
+          "lab3_f1dead_z2",
+          "lab3_f1inv_z2",
+          "lab3_f1bdead",
+          "lab3_f1binv",
+          "lab3_f2bdead",
+          "lab3_f2dead_lowsun",
+          "labmon2_nostereo_f2dead_lowsun"
+        ],
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "30001888910": {
+        "profiles": [
+          "lab3_f1dead",
+          "lab3_f1inv",
+          "lab3_f2dead",
+          "lab3_f2inv",
+          "lab3_f1dead_z2",
+          "lab3_f1inv_z2",
+          "lab3_f1bdead",
+          "lab3_f1binv",
+          "lab3_f2bdead",
+          "lab3_f2dead_lowsun",
+          "labmon2_nostereo_f2dead_lowsun"
+        ],
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      }
+    }
+  },
+  "tables": [
+    {
+      "file": "analysis/registered/phase2_v2_registered_family.csv",
+      "key": [
+        "registered_cell"
+      ],
+      "rows": [
+        "lab3_f1dead",
+        "lab3_f1dead_z2",
+        "lab3_f1bdead",
+        "lab3_f1binv",
+        "lab2_f1bdead",
+        "labmon_f1dead",
+        "lab3_f2dead_lowsun",
+        "labmon2_f2dead_lowsun"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m8": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "lab3_f1dead": {
+          "mean_paired_difference": {
+            "float": 2066.4
+          }
+        },
+        "lab3_f1dead_z2": {
+          "mean_paired_difference": {
+            "float": 3512.0
+          }
+        },
+        "lab3_f1bdead": {
+          "mean_paired_difference": {
+            "float": -19.95
+          }
+        },
+        "lab3_f1binv": {
+          "mean_paired_difference": {
+            "float": -16.45
+          }
+        },
+        "lab2_f1bdead": {
+          "mean_paired_difference": {
+            "float": -92.65
+          }
+        },
+        "labmon_f1dead": {
+          "mean_paired_difference": {
+            "float": -218.6
+          }
+        },
+        "lab3_f2dead_lowsun": {
+          "mean_paired_difference": {
+            "float": 3654.15
+          }
+        },
+        "labmon2_f2dead_lowsun": {
+          "mean_paired_difference": {
+            "float": -168.75
+          }
+        }
+      }
+    }
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "run_*/SHA256SUMS.csv",
+        "base": "."
+      }
+    ],
+    "lf_committed": [
+      "run_30001857104/analysis/out/phase2_recovery_ci.csv",
+      "run_30001857104/analysis/out/phase2_recovery_paired.csv",
+      "run_30001867521/analysis/out/phase2_recovery_ci.csv",
+      "run_30001867521/analysis/out/phase2_recovery_paired.csv",
+      "run_30001878310/analysis/out/phase2_recovery_ci.csv",
+      "run_30001878310/analysis/out/phase2_recovery_paired.csv",
+      "run_30001888910/analysis/out/phase2_recovery_ci.csv",
+      "run_30001888910/analysis/out/phase2_recovery_paired.csv"
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase2_v2.py",
+      "{archive}"
+    ],
+    "data": "tracked",
+    "requires": [
+      "{archive}/run_*/recovery_root/seed*/recovery_stereotypes_*.csv"
+    ],
+    "approx_seconds": 40
+  }
+}

@@ -1,0 +1,587 @@
+/*
+   KG-QL: Illuminance Controller Agent
+
+   Gradle build file for the JaCaMo application (training, test, fault-stage
+   and delay-learning agents, plus the checks and tools below).
+
+   Tasks defined here and who uses them:
+     taskQl              training agent (task_ql.jcm); run_full_project.ps1
+     taskBench           test agent (task_bench.jcm), one mode; by hand
+     runFullSweep        test agent over labs x modes; run_full_project.ps1
+     taskAdapt           Phase-2 fault-stage agent (task_adapt.jcm); run_phase2_adapt.ps1
+     taskDynamics        Phase-3 delay agent (task_dynamics.jcm); run_phase3_dynamics.ps1
+     validateTurtle      parses every Turtle file; CI, preflight, workflow warm-up
+     verifyActionRegistry golden check of the action lists; preflight
+     dumpActionRegistry  rewrites the golden action lists; by hand
+     preflight           file and simulator checks before a run; run_full_project.ps1, CI
+     phase1SparqlEvidence prints the lab2 SPARQL example; by hand
+     synthesizeOverlay   writes a learned graph overlay from learner statistics; by hand
+   Every JavaExec task, and the javaexec calls of runFullSweep, receive the
+   -P settings named in _httpKeys as JVM system properties.
+*/
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+version = '1.0'
+group = 'org.jacamo'
+
+repositories {
+    mavenCentral()
+
+    maven { url = uri('https://raw.githubusercontent.com/jacamo-lang/mvn-repo/master') }
+    maven { url = uri('https://repo.gradle.org/gradle/libs-releases') }
+    maven { url = uri('https://jitpack.io') }
+}
+
+// Prints the reasoner's SPARQL query for lab2, its result rows and the
+// starting values that follow from them (docs/VOCABULARY.md, section 5; a
+// stored copy is docs/evidence/lab2_sparql_execution_2026-07-21.txt). Run by hand.
+tasks.register('phase1SparqlEvidence', JavaExec) {
+    group = 'verification'
+    description = 'Print the Phase-1 lab2 SPARQL audit evidence.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.Phase1SparqlEvidence'
+}
+
+// Keep Logback as the single SLF4J runtime provider. JaCaMo / WoT transitive
+// dependencies also bring slf4j-nop and reload4j bindings, which makes SLF4J
+// warn on stderr during preflight and can trip the PowerShell runner.
+configurations.configureEach {
+    exclude group: 'org.slf4j', module: 'slf4j-nop'
+    exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+    exclude group: 'org.slf4j', module: 'slf4j-reload4j'
+}
+
+dependencies {
+    implementation('com.github.GiugAles:jacamo:SS2025')
+    implementation ('com.github.GiugAles:jacamo-hypermedia:SS2025-1')
+    implementation 'com.github.Interactions-HSG:wot-td-java:master-SNAPSHOT'
+    implementation 'com.google.guava:guava:23.5-jre'
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.0'
+    implementation 'org.apache.httpcomponents.client5:httpclient5-fluent:5.0'
+    // Apache Jena ARQ: loads the Turtle knowledge graphs and runs the SPARQL
+    // queries (StereotypeReasoner, OntologyArtifact, TurtleValidator,
+    // OverlaySynthesizer, Phase1SparqlEvidence).
+    implementation 'org.apache.jena:jena-arq:4.10.0'
+
+    // ── Logging via SLF4J + Logback (configuration: src/resources/logback.xml)
+    // logback-classic implements SLF4J; logstash-logback-encoder writes the
+    // JSON log file of logback.xml; jul-to-slf4j routes java.util.logging
+    // (used in src/env/tools) into the same pipeline (LoggingBootstrap).
+    implementation 'ch.qos.logback:logback-classic:1.5.6'
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    implementation 'org.slf4j:jul-to-slf4j:2.0.13'
+
+    // ── Unit-test dependencies ───────────────────────────────────────────
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+}
+
+// test: the JUnit 5 tests under src/test/java (run by ci.yml).
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        showStandardStreams = false
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src/env'
+            srcDir 'src/agt'
+            srcDir 'src/org'
+            srcDir 'src/int'
+            srcDir 'src/java'
+        }
+        resources {
+            srcDir 'src/resources'
+        }
+    }
+    test {
+        java {
+            srcDir 'src/test/java'
+        }
+        // NOTE: src/test/resources is already Gradle's DEFAULT test-resources
+        // dir; re-declaring it via srcDir duplicates every entry and fails
+        // processTestResources once the dir is non-empty. The default is
+        // used as-is.
+    }
+}
+
+// taskQl: trains the Q-learning agent in one lab (task_ql.jcm). Called by
+// run_full_project.ps1 once per training cell. The arm is the belief
+// use_stereotypes(true/false) in src/agt/illuminance_controller_agent_ql.asl,
+// which the runner sets before each cell. Needs the lab's Node-RED simulator
+// on the port named in the lab's Thing Description.
+task taskQl (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the Q-learning illuminance controller agent'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_ql.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pprofile=<id> sets the JVM system property active.profile, which the
+    // QL agent reads at startup via tools.jia.system_prop and uses to
+    // override the default active_profile/1 belief.
+    doFirst {
+        def overrideProfile = project.findProperty('profile')
+        if (overrideProfile) {
+            systemProperty 'active.profile', overrideProfile
+            println "taskQl: active.profile=${overrideProfile}"
+        }
+    }
+}
+
+// taskBench: runs the test agent (task_bench.jcm) once, in one mode: the
+// bench_mode belief of src/agt/illuminance_controller_agent_bench.asl, or
+// -Pmode=<rule_based|ql_false|ql_true>. Each test situation of the lab's test
+// file is played bench_runs times. Used by hand; the runner uses runFullSweep
+// below instead. Needs the lab's Node-RED simulator.
+task taskBench (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the execution-phase benchmark (rule-based vs ql_false vs ql_true)'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_bench.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pmode=<mode> sets the JVM system property bench.mode, which the bench
+    // agent reads at startup via tools.jia.system_prop and uses to override
+    // the default bench_mode/1 belief.
+    doFirst {
+        def overrideMode = project.findProperty('mode')
+        if (overrideMode) {
+            systemProperty 'bench.mode', overrideMode
+            println "taskBench: bench.mode=${overrideMode}"
+        }
+    }
+}
+
+// taskAdapt: the Phase-2 fault stage (task_adapt.jcm). Loads the parent table
+// learned in the healthy lab, detects the broken device, blacklists it and
+// learns again with the remaining devices. Called by run_phase2_adapt.ps1.
+//   -Pprofile=<faulty lab>  e.g. lab2_f1dead | lab2_f1inv | lab3_f1dead | ...
+//   -Pmode=<ql_true|ql_false>  knowledge arm or plain arm.
+// Needs the faulty lab's Node-RED flow on the parent lab's port.
+task taskAdapt (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the Phase-2 fault-detection / blacklist / re-learn agent'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_adapt.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pprofile=<id> -> active.profile (faulty profile selector).
+    // -Pmode=<ql_true|ql_false> -> adapt.mode (stereotype on/off). Both are
+    // read at startup by the adapt agent via tools.jia.system_prop.
+    doFirst {
+        def overrideProfile = project.findProperty('profile')
+        if (overrideProfile) {
+            systemProperty 'active.profile', overrideProfile
+            println "taskAdapt: active.profile=${overrideProfile}"
+        }
+        def overrideMode = project.findProperty('mode')
+        if (overrideMode) {
+            systemProperty 'adapt.mode', overrideMode
+            println "taskAdapt: adapt.mode=${overrideMode}"
+        }
+        // -Padapt.episodes=<N> -> adapt.episodes: launch-time re-learn budget
+        // override (e.g. a fast smoke run). Read numerically by the adapt agent
+        // via tools.jia.system_prop_num; default = the profile's training_params.
+        def overrideEpisodes = project.findProperty('adapt.episodes')
+        if (overrideEpisodes) {
+            systemProperty 'adapt.episodes', overrideEpisodes
+            println "taskAdapt: adapt.episodes=${overrideEpisodes}"
+        }
+    }
+}
+
+// taskDynamics: the Phase-3 agent (task_dynamics.jcm). Measures the response
+// delay of every device (lamp about 0 ticks; slow blind 12 ticks = 60 s),
+// then plans the deadline goals. Called by run_phase3_dynamics.ps1.
+// Outputs (per lab P, mode bool B in {true,false}):
+//   learned_dynamics_<B>_<P>.ttl     — the delays as ws:responseDelay (not read back)
+//   dynamics_delays_<B>_<P>.csv      — delay per device
+//   timebounded_results_<B>_<P>.csv  — one row per deadline goal
+//   -Pprofile=<slow lab>  lab2_slow | lab3_slow
+//   -Pmode=<ql_true|ql_false>  the planner uses the measured delays (ql_true)
+//                              or assumes every device acts at once (ql_false).
+// Needs the slow lab's Node-RED flow (lab2_slow -> port 1895,
+// lab3_slow -> port 1896).
+task taskDynamics (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the Phase-3 response-delay learning / time-bounded exploitation agent'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_dynamics.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pprofile=<id> -> active.profile (slow profile selector).
+    // -Pmode=<ql_true|ql_false> -> dynamics.mode (planner with or without the
+    // measured delays).
+    // Both are read at startup by the dynamics agent via tools.jia.system_prop.
+    doFirst {
+        def overrideProfile = project.findProperty('profile')
+        if (overrideProfile) {
+            systemProperty 'active.profile', overrideProfile
+            println "taskDynamics: active.profile=${overrideProfile}"
+        }
+        def overrideMode = project.findProperty('mode')
+        if (overrideMode) {
+            systemProperty 'dynamics.mode', overrideMode
+            println "taskDynamics: dynamics.mode=${overrideMode}"
+        }
+    }
+}
+
+clean {
+    delete 'bin'
+    delete 'build'
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// _httpKeys: the -P settings that are passed on to the agent JVM as system
+// properties of the same name (every JavaExec task below, and the javaexec
+// calls of runFullSweep). A -P setting that is not in this list does not
+// reach the program. The runners build the -P settings from
+// config/run_config.json; the Java classes read them with System.getProperty
+// and use their built-in default when one is absent.
+// ─────────────────────────────────────────────────────────────────────────
+def _httpKeys = ['sim.http.connectMs','sim.http.responseMs','sim.http.maxRetries','sim.http.backoffMs',
+                 'reward.clip','stereo.priorScale','stereo.priorDecayEpisodes','stereo.priorDecayFloor',
+                 'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus','stereo.crossZoneBonus',
+                 'stereo.redundancyOnly',
+                 // Phase-1b settings about irrelevant devices and the direction
+                 // of effects (read by StereotypeReasoner; default 0.0 = off).
+                 // They were missing from this list in the first Phase-1b
+                 // campaign, so its "extended" runs ran without them; since
+                 // then StereotypeReasoner logs the effective values and
+                 // run_full_project.ps1 checks them before writing TRAINING_OK.json.
+                 'stereo.irrelevantDvPrior','stereo.bandMirrorInit','stereo.bandMirrorPrior',
+                 // Knowledge layer: full | brick | redundancy.
+                 'stereo.knowledgeLayer',
+                 // Weight of the energy preference (does not fade). Only lab5's
+                 // graph declares ws:energyCost, so it has no effect elsewhere.
+                 'stereo.energyPriorWeight',
+                 // Reward shaping, adaptive trust, run seed, protocol version.
+                 'reward.shaping','stereo.adaptiveTrust','stereo.adaptiveTrust.minSamples','stereo.adaptiveTrust.floor',
+                 'run.seed','phase1.protocolVersion',
+                 // Fault stage: give both arms the same random stream (default false).
+                 'phase2.pairedArmRng',
+                 // Token:weight list of the deterministic energy measure
+                 // PolicyEnergyCost (Phase1PolicyEnergy).
+                 'phase1.policyEnergyWeights',
+                 // Phase 3: probe timing, sample count and DynamicsLearner
+                 // thresholds. Read by the dynamics agent
+                 // (tools.jia.system_prop_num) and by tools.DynamicsLearner
+                 // (System.getProperty). active.profile + dynamics.mode are
+                 // forwarded separately by taskDynamics.doFirst.
+                 'seconds.per.tick','probe.settle.ms','probe.poll.ms','probe.max.wait.ticks',
+                 'probe.hold.ticks','probe.count','dynamics.learner.minSamples','dynamics.instant.threshold.sec']
+tasks.withType(JavaExec).configureEach {
+    // QLearner allocates per-zone Q-tables of size nStates*nActions plus
+    // serialisation buffers and the StereotypeLearner accumulators. The heap
+    // is fixed at 4g: with 2g a training JVM once ended "cleanly" in the
+    // middle of training, because an out-of-memory error was caught silently
+    // inside a CArtAgO worker thread and cleared all agent intentions.
+    maxHeapSize = '4g'
+    // Surface any OOM clearly instead of letting it be swallowed.
+    jvmArgs '-XX:+HeapDumpOnOutOfMemoryError', "-XX:HeapDumpPath=${rootDir}/log"
+    // Keep JaCaMoLauncher's stdin reader alive: by default Gradle JavaExec
+    // attaches a closed input stream which can cause launcher utilities that
+    // read System.in to see immediate EOF.
+    standardInput = System.in
+    doFirst {
+        _httpKeys.each { key ->
+            def val = project.findProperty(key)
+            if (val != null && val.toString() != '') {
+                systemProperty key, val.toString()
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// runFullSweep: the test over all (lab x mode) cells
+//
+// For each cell it starts the test agent (task_bench.jcm) in its own JVM,
+// with the lab and the mode as the system properties active.profile and
+// bench.mode (no .asl file is changed), then copies the result files of the
+// repository root (benchmark_results_*, bench_step_log_*, and the training
+// files metrics_*, iv_stats_*, qtable_final_*, coverage_*, first_goal_*,
+// learned_stereotypes_* that are present) to benchmark/results/<lab>/<mode>/.
+// The simulators of the labs must be running.
+//
+// run_full_project.ps1 calls it for the test step and always passes
+// -Pprofiles and -Pmodes.
+// Profiles: default lab1,lab2,lab3
+// Modes:    rule_based, ql_false, ql_true
+//
+// Usage:
+//   gradlew runFullSweep                 # lab1..lab3 x all modes
+//   gradlew runFullSweep "-Pprofiles=lab2,lab3" -Pmodes=ql_true
+// ─────────────────────────────────────────────────────────────────────────
+task runFullSweep(dependsOn: 'classes') {
+    description = 'Phase 5: sweep benchmark over (profile x mode) cells'
+    group = ' JaCaMo'
+
+    doLast {
+        def profileList = (project.findProperty('profiles')
+            ?: 'lab1,lab2,lab3')
+                .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+        def modeList    = (project.findProperty('modes')
+                ?: 'rule_based,ql_false,ql_true')
+                .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+
+        def resultsRoot = file('benchmark/results')
+        resultsRoot.mkdirs()
+
+        profileList.each { profile ->
+            modeList.each { mode ->
+                println "─────────────────────────────────────────────"
+                println " runFullSweep: profile=${profile} mode=${mode}"
+                println "─────────────────────────────────────────────"
+
+                // The test agent reads these via tools.jia.system_prop at
+                // startup and rebinds active_profile/1 and bench_mode/1.
+                javaexec {
+                    mainClass   = 'jacamo.infra.JaCaMoLauncher'
+                    args        = ['task_bench.jcm']
+                    classpath   = sourceSets.main.runtimeClasspath
+                    systemProperty 'active.profile', profile
+                    systemProperty 'bench.mode',     mode
+                    // Project.javaexec(closure) is NOT
+                    // a registered task, so the tasks.withType(JavaExec)
+                    // configureEach block above does not apply. Re-forward
+                    // every _httpKeys entry here so run.seed, stereo.priorScale
+                    // and all learning hyperparams actually reach the
+                    // benchmark JVM (and thus QLearner's tie-break RNG and
+                    // any benchmark-time learning props read at class-load).
+                    _httpKeys.each { key ->
+                        def val = project.findProperty(key)
+                        if (val != null && val.toString() != '') {
+                            systemProperty key, val.toString()
+                        }
+                    }
+                }
+
+                // Archive output artefacts (whichever exist for this mode).
+                def cellDir = file("benchmark/results/${profile}/${mode}")
+                cellDir.mkdirs()
+                fileTree(projectDir).matching {
+                    include 'benchmark_results_*.csv'
+                    include 'bench_step_log_*.csv'
+                    include 'metrics_stereotypes_*.csv'
+                    include 'iv_stats_stereotypes_*.json'
+                    include 'qtable_final_stereotypes_*.csv'
+                    include 'coverage_stereotypes_*.csv'
+                    include 'first_goal_stereotypes_*.csv'
+                    include 'learned_stereotypes_*.ttl'
+                }.each { artefact ->
+                    copy {
+                        from artefact
+                        into cellDir
+                    }
+                }
+            }
+        }
+
+        println "runFullSweep complete. Results under: ${resultsRoot}"
+    }
+}
+
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Checks and tools
+// ─────────────────────────────────────────────────────────────────────────
+
+// validateTurtle: parse every *.ttl under src/resources with Jena and fail
+// the build if any file is syntactically invalid. Run by ci.yml, by the
+// dependency warm-up step of the experiment workflows, and as a dependency of
+// preflight. Implemented as a JavaExec task (Jena lives on the main runtime
+// classpath, not the buildscript classpath).
+task validateTurtle(type: JavaExec, dependsOn: 'classes') {
+    description = 'Validates every Turtle file under src/resources parses with Jena.'
+    group = ' KG-QL'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.TurtleValidator'
+    args 'src/resources'
+}
+
+// verifyActionRegistry: golden test for the action lists (registries) that
+// the reasoner derives from each lab's graph. Recomputes every lab ontology
+// set's registry with the CURRENT StereotypeReasoner code and compares it to
+// the label-keyed goldens under config/golden_registry. The contract is the
+// action-KEY SET + per-action metadata; action INDICES are informational only
+// (all persisted per-action artifacts are label-remapped on load). Fails the
+// build on any set/metadata difference. Pass -PregistryGolden=<dir> to check
+// against a different golden dir. A dependency of preflight; also run by hand.
+task verifyActionRegistry(type: JavaExec, dependsOn: 'classes') {
+    description = 'Golden-checks every lab ontology action registry against config/golden_registry.'
+    group = ' KG-QL'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.RegistryGoldenCheck'
+    args (project.findProperty('registryGolden') ?: 'config/golden_registry')
+}
+
+// dumpActionRegistry: (re)generates the golden registry CSVs. Run ONLY after
+// an INTENDED discovery/ontology change, review the diff, and commit the
+// updated goldens together with the change that caused it.
+task dumpActionRegistry(type: JavaExec, dependsOn: 'classes') {
+    description = 'Regenerates the golden action-registry CSVs under config/golden_registry.'
+    group = ' KG-QL'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.ActionRegistryDump'
+    args (project.findProperty('registryOut') ?: 'config/golden_registry')
+}
+
+// synthesizeOverlay: writes a learned knowledge-graph overlay. Reads the raw
+// StereotypeLearner statistics written by saveRawStats after a training run,
+// applies the emission gates of OverlaySynthesizer, and writes the overlay
+// TTL (with provenance) and the learned_claims CSV. Run by hand; no runner or
+// workflow calls it. Usage:
+//   gradlew synthesizeOverlay -Pstats=learned_stats_true_labmon_nostereo.csv
+//     -Pont=building_6_monitor_nostereo.ttl
+//     -Pout=learned_overlay_true_labmon_nostereo.ttl
+//     -Pclaims=learned_claims_true_labmon_nostereo.csv
+//     [-Prun=<ci run id> -Pseed=<n> -PsourceProfile=<profile> -Pcommit=<sha>]
+task synthesizeOverlay(type: JavaExec, dependsOn: 'classes') {
+    description = 'Phase 5: synthesizes a learned KG overlay TTL + claims CSV from raw learner stats.'
+    group = ' KG-QL'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.OverlaySynthesizer'
+    doFirst {
+        def argList = []
+        ['stats', 'ont', 'out', 'claims', 'run', 'seed', 'commit'].each { key ->
+            def val = project.findProperty(key)
+            if (val != null && val.toString() != '') { argList += ["--${key}", val.toString()] }
+        }
+        def profileVal = project.findProperty('sourceProfile')
+        if (profileVal) { argList += ['--sourceProfile', profileVal.toString()] }
+        args = argList
+    }
+}
+
+// preflight: lightweight sanity checks before a long run. For each requested
+// profile it reads the profile's entry in src/agt/lab_profiles.asl and checks
+// that its Thing Description, its knowledge-graph files and its scenario JSON
+// files exist (and that the JSON parses), and that the simulator port responds
+// to /health (unless -PskipSimProbe is passed). Depends on validateTurtle and
+// verifyActionRegistry. Called by run_full_project.ps1 (unless -SkipPreflight)
+// and, with -PskipSimProbe, by ci.yml. Run via:
+//   gradlew preflight "-Pprofiles=lab1,lab2,lab3"
+//   gradlew preflight "-Pprofiles=lab2" -PskipSimProbe
+task preflight(dependsOn: ['validateTurtle', 'verifyActionRegistry']) {
+    description = 'Validate profiles, scenarios, ontology, and simulator availability.'
+    group = ' KG-QL'
+
+    doLast {
+        def profileList = (project.findProperty('profiles')
+            ?: 'lab1,lab2,lab3')
+                .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+        boolean skipSim = project.hasProperty('skipSimProbe')
+        def profilesAsl = file('src/agt/lab_profiles.asl').getText('UTF-8')
+
+        // Ports from simulator_port_map of config/run_config.json; the
+        // literal map is used only when the file is missing or unreadable.
+        def portMap = [
+            lab1: 1892, lab2: 1893, lab3: 1894
+        ]
+        def runCfg = file('config/run_config.json')
+        if (runCfg.exists()) {
+            try {
+                def text = runCfg.getText('UTF-8')
+                if (text.startsWith('\uFEFF')) { text = text.substring(1) }
+                def parsed = new groovy.json.JsonSlurper().parseText(text)
+                if (parsed.simulator_port_map instanceof Map) {
+                    def loaded = [:]
+                    parsed.simulator_port_map.each { k, v -> loaded[k.toString()] = v as int }
+                    if (!loaded.isEmpty()) { portMap = loaded }
+                }
+            } catch (Throwable t) {
+                println "      (warn) failed to read simulator_port_map from ${runCfg.path}: ${t.message}"
+            }
+        }
+
+        def errors = []
+        def passed = []
+
+        profileList.each { profile ->
+            def profileErrors = []
+
+            // 0. The profile's entry in lab_profiles.asl names its files.
+            def entry = java.util.regex.Pattern.compile(
+                'lab_profile\\("' + java.util.regex.Pattern.quote(profile) + '",\\s*' +
+                'td\\("classpath:([^"]+)"\\),\\s*ont\\(\\[([^\\]]*)\\]\\),\\s*' +
+                'scenarios\\("([^"]+)"\\),\\s*train_scenarios\\("([^"]*)"\\)',
+                java.util.regex.Pattern.DOTALL).matcher(profilesAsl)
+            if (!entry.find()) {
+                profileErrors << "no lab_profile(\"${profile}\", td(...), ont(...), scenarios(...), train_scenarios(...)) in src/agt/lab_profiles.asl"
+                profileErrors.each { e -> println " FAIL ${profile} - ${e}" }
+                errors.addAll(profileErrors.collect { "[${profile}] ${it}" })
+                return
+            }
+
+            // 1. TD interactions file named by the profile.
+            def tdRes = file("src/resources/${entry.group(1)}")
+            if (!tdRes.exists()) profileErrors << "missing TD: ${tdRes.path}"
+
+            // 2. Scenario JSON files named by the profile (train file may be empty).
+            def scen      = file(entry.group(3))
+            def trainScen = entry.group(4) ? file(entry.group(4)) : null
+            if (!scen.exists()) profileErrors << "missing scenarios: ${scen.path}"
+            if (trainScen != null && !trainScen.exists()) profileErrors << "missing train scenarios: ${trainScen.path}"
+
+            // 3. Validate JSON parse where present (BOM-tolerant).
+            [scen, trainScen].findAll { it != null }.each { jf ->
+                if (jf.exists()) {
+                    try {
+                        def text = jf.getText('UTF-8')
+                        if (text.startsWith('\uFEFF')) { text = text.substring(1) }
+                        new groovy.json.JsonSlurper().parseText(text)
+                    } catch (Throwable t) {
+                        profileErrors << "${jf.name} not valid JSON: ${t.message}"
+                    }
+                }
+            }
+
+            // 4. Knowledge-graph files named by the profile's ont([...]) list.
+            def ontNames = (entry.group(2) =~ /"([^"]+)"/).collect { it[1] }
+            if (ontNames.isEmpty()) profileErrors << "empty ont([...]) list in lab_profiles.asl"
+            ontNames.each { n ->
+                def ont = file("src/resources/${n}")
+                if (!ont.exists()) profileErrors << "missing ontology: ${ont.path}"
+            }
+
+            // 5. Simulator /health probe (skipped in CI / when sims are down).
+            if (!skipSim && portMap.containsKey(profile)) {
+                int port = portMap[profile]
+                try {
+                    def url = new java.net.URL("http://127.0.0.1:${port}/health")
+                    def conn = (java.net.HttpURLConnection) url.openConnection()
+                    conn.setConnectTimeout(2000)
+                    conn.setReadTimeout(2000)
+                    conn.setRequestMethod('GET')
+                    int rc = conn.getResponseCode()
+                    if (rc != 200) profileErrors << "simulator health check :${port} returned HTTP ${rc}"
+                } catch (Throwable t) {
+                    profileErrors << "simulator unreachable :${port} (${t.class.simpleName}: ${t.message})"
+                }
+            }
+
+            if (profileErrors.isEmpty()) {
+                passed << profile
+                println " OK   ${profile}"
+            } else {
+                profileErrors.each { e -> println " FAIL ${profile} - ${e}" }
+                errors.addAll(profileErrors.collect { "[${profile}] ${it}" })
+            }
+        }
+
+        println "--- preflight summary: ${passed.size()}/${profileList.size()} profile(s) passed ---"
+        if (!errors.isEmpty()) {
+            throw new GradleException("preflight: ${errors.size()} check(s) failed.")
+        }
+    }
+}

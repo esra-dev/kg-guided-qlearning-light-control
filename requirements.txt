@@ -1,0 +1,15 @@
+# Third-party Python packages of the analysis scripts (analysis/), their tests
+# (analysis/tests/) and the helper scripts (scripts/, dashboard/scripts/).
+# Everything else these programs import is in the Python standard library.
+# Python 3.11 or newer.
+#
+#   python -m pip install -r requirements.txt
+#
+# The GitHub workflows install the same packages without a version
+# (`pip install numpy scipy matplotlib`, `pip install pytest numpy matplotlib`),
+# so they get the newest release; the lower bounds below are versions with
+# which the tests and reproducers passed.
+numpy>=2.4        # statistics in the registered analyses and reproducers
+scipy>=1.17       # Wilcoxon test in analysis/sweep_report.py (optional there)
+matplotlib>=3.10  # figures (analysis/learning_curves.py, analysis/sweep_report.py, Q-gap study)
+pytest>=9.0       # the tests in analysis/tests/

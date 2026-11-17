@@ -1,0 +1,342 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase2_v3_structonly",
+  "archive": "results/phase2_v3_structonly",
+  "role": "accepted",
+  "phase": "2",
+  "description": "Phase 2 structure-only campaign (v3): four fault cells with the Brick knowledge layer in both arms, compared against the full-layer runs of record in phase2_v2_corrected and phase2_v3_lowsun.",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase2.yml",
+    "workflow_note": "Every archived workflow_inputs.json of this campaign records \".github/workflows/phase1.yml\", although the runs were dispatched through workflow_actual (named in each run's ARCHIVE_MANIFEST.md). The receipt value is pinned as it is.",
+    "all_runs": {
+      "head_sha": "b5bf2146d5f45d0a73b1c2905d38d347ead555e0",
+      "knowledge_layer": "brick",
+      "profiles": [
+        "lab2_f1bdead",
+        "lab3_f1bdead",
+        "lab3_f2dead_lowsun",
+        "labmon2_f2dead_lowsun"
+      ],
+      "publish_results": true,
+      "ref": "refs/heads/phase2-structonly-2026-11",
+      "run_mode": "phase1_v2_kg_only",
+      "seeds": {
+        "int_range": [
+          1,
+          20
+        ]
+      },
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "43590832041": {}
+    }
+  },
+  "tables": [
+    {
+      "file": "analysis/registered/phase2_structonly_v3_wrongblame_family.csv",
+      "key": [
+        "registered_cell",
+        "arm"
+      ],
+      "rows": [
+        "lab2_f1bdead|ql_true",
+        "lab2_f1bdead|ql_false",
+        "lab3_f1bdead|ql_true",
+        "lab3_f1bdead|ql_false",
+        "lab3_f2dead_lowsun|ql_true",
+        "lab3_f2dead_lowsun|ql_false",
+        "labmon2_f2dead_lowsun|ql_true",
+        "labmon2_f2dead_lowsun|ql_false"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "bh_family_m": "8",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m8": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "lab2_f1bdead|ql_true": {
+          "mean_paired_difference": {
+            "float": 0.4
+          },
+          "q_signflip_bh_m8": {
+            "float": 0.03125
+          }
+        },
+        "lab2_f1bdead|ql_false": {
+          "mean_paired_difference": {
+            "float": 0.85
+          },
+          "q_signflip_bh_m8": {
+            "float": 0.0001220703125
+          }
+        },
+        "lab3_f1bdead|ql_true": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "lab3_f1bdead|ql_false": {
+          "mean_paired_difference": {
+            "float": 0.25
+          },
+          "q_signflip_bh_m8": {
+            "float": 0.16666666666666666
+          }
+        },
+        "lab3_f2dead_lowsun|ql_true": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "lab3_f2dead_lowsun|ql_false": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "labmon2_f2dead_lowsun|ql_true": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "labmon2_f2dead_lowsun|ql_false": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        }
+      }
+    },
+    {
+      "file": "analysis/registered/phase2_structonly_v3_detection_family.csv",
+      "key": [
+        "registered_cell",
+        "arm"
+      ],
+      "rows": [
+        "lab2_f1bdead|ql_true",
+        "lab2_f1bdead|ql_false",
+        "lab3_f1bdead|ql_true",
+        "lab3_f1bdead|ql_false",
+        "lab3_f2dead_lowsun|ql_true",
+        "lab3_f2dead_lowsun|ql_false",
+        "labmon2_f2dead_lowsun|ql_true",
+        "labmon2_f2dead_lowsun|ql_false"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "bh_family_m": "8",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m8": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "lab2_f1bdead|ql_true": {
+          "mean_paired_difference": {
+            "float": 198.1
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "lab2_f1bdead|ql_false": {
+          "mean_paired_difference": {
+            "float": -1.4
+          },
+          "q_signflip_bh_m8": {
+            "float": 0.12251790364583333
+          }
+        },
+        "lab3_f1bdead|ql_true": {
+          "mean_paired_difference": {
+            "float": 3996.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.52587890625e-05
+          }
+        },
+        "lab3_f1bdead|ql_false": {
+          "mean_paired_difference": {
+            "float": 2197.4
+          },
+          "q_signflip_bh_m8": {
+            "float": 0.0033416748046875
+          }
+        },
+        "lab3_f2dead_lowsun|ql_true": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "lab3_f2dead_lowsun|ql_false": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "labmon2_f2dead_lowsun|ql_true": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "labmon2_f2dead_lowsun|ql_false": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        }
+      }
+    },
+    {
+      "file": "analysis/registered/phase2_structonly_v3_recovery_family.csv",
+      "key": [
+        "registered_cell",
+        "arm"
+      ],
+      "rows": [
+        "lab2_f1bdead|ql_true",
+        "lab2_f1bdead|ql_false",
+        "lab3_f1bdead|ql_true",
+        "lab3_f1bdead|ql_false",
+        "lab3_f2dead_lowsun|ql_true",
+        "lab3_f2dead_lowsun|ql_false",
+        "labmon2_f2dead_lowsun|ql_true",
+        "labmon2_f2dead_lowsun|ql_false"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "bh_family_m": "8",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m8": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "lab2_f1bdead|ql_true": {
+          "mean_paired_difference": {
+            "float": 202.8
+          },
+          "q_signflip_bh_m8": {
+            "float": 0.0869140625
+          }
+        },
+        "lab2_f1bdead|ql_false": {
+          "mean_paired_difference": {
+            "float": 8.9
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "lab3_f1bdead|ql_true": {
+          "mean_paired_difference": {
+            "float": 3884.95
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.52587890625e-05
+          }
+        },
+        "lab3_f1bdead|ql_false": {
+          "mean_paired_difference": {
+            "float": 2142.65
+          },
+          "q_signflip_bh_m8": {
+            "float": 0.00086212158203125
+          }
+        },
+        "lab3_f2dead_lowsun|ql_true": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "lab3_f2dead_lowsun|ql_false": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "labmon2_f2dead_lowsun|ql_true": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        },
+        "labmon2_f2dead_lowsun|ql_false": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "q_signflip_bh_m8": {
+            "float": 1.0
+          }
+        }
+      }
+    }
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "run_*/SHA256SUMS.csv",
+        "base": "."
+      }
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase2_structonly_v3.py",
+      "{archive}",
+      "--record-base",
+      "{results}"
+    ],
+    "data": "tracked",
+    "requires": [
+      "{archive}/run_*/recovery_root/seed*/recovery_stereotypes_*.csv",
+      "{results}/phase2_v2_corrected/run_*/recovery_root/seed*/recovery_stereotypes_*.csv"
+    ],
+    "approx_seconds": 15
+  }
+}

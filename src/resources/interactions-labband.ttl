@@ -1,0 +1,119 @@
+@prefix td:     <https://www.w3.org/2019/wot/td#> .
+@prefix hctl:   <https://www.w3.org/2019/wot/hypermedia#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix eve:    <http://w3id.org/eve#> .
+@prefix wotsec: <https://www.w3.org/2019/wot/security#> .
+@prefix js:     <https://www.w3.org/2019/wot/json-schema#> .
+@prefix htv:    <http://www.w3.org/2011/http#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+# ============================================================================
+#  Thing Description (W3C Web of Things) of the lab labband: profile
+#  "labband" in src/agt/lab_profiles.asl, Phase 1b exact-band lab.
+#  Simulator flow simulator/simulator_flow_labband.json, port 1912.
+#
+#  LabEnvironment reads this file through the profile's td(...) entry. The
+#  property "Status" (GET /was/rl/status) returns the readings listed below;
+#  each action is sent as JSON to POST /was/rl/action.
+#
+#  Room: one zone, four devices:
+#      daylight = Z1Blinds ? 0.50 * Sunshine : 0,  times 0.25 while Awning is on
+#      Z1Level  = 25 + (StrongLamp ? 400 : 0) + (WeakLamp ? 150 : 0) + daylight
+#  The target is rank 2 exactly (100 to below 300 lux), so too much light
+#  misses the goal as well. The awning only matters while the blind is open
+#  and the sun is above 0. Sunshine is set by the start situation (0, 100,
+#  400 or 900) and stays constant in the episode. Energy per tick: StrongLamp
+#  2, WeakLamp 1.
+# ============================================================================
+
+<urn:kg-ql:interactions-labband> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
+
+    td:title "The lab of the Interactions team – Lab Band Exact-Band" ;
+    td:hasSecurityConfiguration [ a wotsec:NoSecurityScheme ] ;
+    td:hasBase <http://localhost:1912/was/rl/> ;
+
+    td:hasPropertyAffordance [
+        a td:PropertyAffordance, <https://example.org/was#Status>, js:ObjectSchema ;
+        td:name "Status" ;
+        dct:title "Read the lab status" ;
+        td:hasForm [
+            htv:methodName "GET" ;
+            hctl:hasTarget <http://localhost:1912/was/rl/status> ;
+            hctl:forContentType "application/json" ;
+            hctl:hasOperationType td:readProperty
+        ] ;
+        td:isObservable false ;
+        js:properties
+            [ a js:NumberSchema, <http://example.org/was#Z1Level> ;
+              js:propertyName "Z1Level" ],
+            [ a js:BooleanSchema, <http://example.org/was#StrongLamp> ;
+              js:propertyName "StrongLamp" ],
+            [ a js:BooleanSchema, <http://example.org/was#WeakLamp> ;
+              js:propertyName "WeakLamp" ],
+            [ a js:BooleanSchema, <http://example.org/was#Z1Blinds> ;
+              js:propertyName "Z1Blinds" ],
+            [ a js:BooleanSchema, <http://example.org/was#Awning> ;
+              js:propertyName "Awning" ],
+            [ a js:NumberSchema, <http://example.org/was#Sunshine> ;
+              js:propertyName "Sunshine" ],
+            [ a js:NumberSchema, <http://example.org/was#EnergyCost> ;
+              js:propertyName "EnergyCost" ],
+            [ a js:NumberSchema, <http://example.org/was#TotalEnergyCost> ;
+              js:propertyName "TotalEnergyCost" ],
+            [ a js:NumberSchema, <http://example.org/was#Hour> ;
+              js:propertyName "Hour" ]
+    ] ;
+
+    td:hasActionAffordance
+        [ a td:ActionAffordance, <http://example.org/was#SetStrongLamp> ;
+          td:name "Control Strong Lamp" ;
+          dct:title "Turn on and off the strong lamp in Z1 (+400 lux — overshoots the 100-300 band on its own)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1912/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "StrongLamp" ]
+          ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetWeakLamp> ;
+          td:name "Control Weak Lamp" ;
+          dct:title "Turn on and off the weak task lamp in Z1 (+150 lux)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1912/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "WeakLamp" ]
+          ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ1Blinds> ;
+          td:name "Control Blinds Z1" ;
+          dct:title "Raise and lower the blinds in Z1 (opens the 0.50*Sun daylight path)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1912/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Z1Blinds" ]
+          ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetAwning> ;
+          td:name "Control Awning" ;
+          dct:title "Deploy and retract the external awning (shades the open daylight path to 25% — only matters while the blinds are open and the sun is up)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1912/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Awning" ]
+          ]
+        ] .

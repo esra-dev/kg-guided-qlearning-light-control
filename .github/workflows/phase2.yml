@@ -1,0 +1,530 @@
+name: Phase 2 (fault detection, blacklist, re-learn)
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 2: device faults. Trains the healthy parent labs, then runs the fault
+# stage (detect, blacklist, re-learn) in the faulty labs, both in one run.
+# Phase 1 need not run first: each seed gets its own parent tables.
+# Started by hand (workflow_dispatch). docs/EXPERIMENTS.md, section 5.
+#
+# Inputs (default):
+#   adapt_profiles   faulty labs (the 15 lamp and blind faults of lab1-lab3)
+#   seeds            run.seed values (1..10)
+#   run_mode         run mode of the parent training (phase1_v2_kg_only)
+#   adapt_episodes   fault-stage budget, 0 = the lab's training_params (0)
+#   knowledge_layer  layer of the fault stage: full | brick | redundancy (full)
+#   settings_profile fault-stage settings: record | paired | aligned (record)
+#   publish_results  copy the summary to the branch "results" (true)
+#
+# Jobs:
+#   setup        checks knowledge_layer, compiles once (artifact build-classes,
+#                1 day), builds the matrices; the parent labs are looked up
+#                in phase2.parent_profile of config/run_config.json.
+#   train_clean  parent x arm x seed: run_full_project.ps1 training cell
+#                (retried once if it fails within 5 minutes). Artifact
+#                clean-<parent>-stereo-<arm>-seed-<seed> (30 days).
+#   adapt        faulty lab x mode x seed: downloads the parent tables of its
+#                arm and seed, deletes stray result files, regenerates the
+#                faulty flows (simulator/generate_faulty_flows.ps1), runs
+#                run_phase2_adapt.ps1. Artifact adapt-<lab>-<mode>-seed-<seed>
+#                (90 days).
+#   aggregate    runs unless the run was cancelled, also when some adapt jobs
+#                failed. Rebuilds recovery_root/seed<N>/, runs
+#                analysis/phase2_recovery.py (per-run overview: CIs and paired
+#                bootstrap differences, no q-values) and
+#                write_workflow_provenance.py, writes the job summary and
+#                uploads phase2-consolidated (analysis/out, recovery_root and
+#                the parent artifacts; 90 days).
+#
+# publish_results=true: copies analysis/out and recovery_root into the new
+# folder phase2/<run id>-<UTC time>/ of the branch "results" and pushes it
+# (no tag).
+#
+# The outcome measure is RecoveryEpisodes = ReconvergeEpisode - DetectEpisode
+# (lower = faster). The registered results are computed later from the
+# archive by the campaign's registered analysis script.
+# ──────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      adapt_profiles:
+        description: "Comma-separated faulty profiles. Default = all 15 (lamp single/multi + Z2-lamp + blind dead/inverted, lab1/2/3). Use e.g. lab3_f1bdead,lab3_f1binv for a subset."
+        required: false
+        default: "lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv,lab3_f1dead_z2,lab3_f1inv_z2,lab3_f1bdead,lab3_f1binv,lab2_f1bdead,lab2_f1binv"
+      seeds:
+        description: "Comma-separated RNG seeds. Default 1..10 for confirmatory power (paired Wilcoxon needs n>=6). Use 1..5 for a faster pilot."
+        required: false
+        default: "1,2,3,4,5,6,7,8,9,10"
+      run_mode:
+        description: "run_config.json profile for the CLEAN warm-start training: phase1_v2_kg_only (protocol v2: fixed 3000-episode horizon, TRAINING_OK manifests — required for corrected campaigns) | dev (50x20, fast smoke)."
+        required: false
+        default: "phase1_v2_kg_only"
+      adapt_episodes:
+        description: "Re-learn budget per adapt cell. 0 = each profile's training_params default. Recovery now ends early when the greedy policy is stable for fault.recover.window (default 50) episodes. Set e.g. 200 for a fast pipeline smoke."
+        required: false
+        default: "0"
+      knowledge_layer:
+        description: "KG layer for the ADAPTATION step only (fault detector + re-learn priors, BOTH arms): full (runs-of-record default) | brick (structure-only) | redundancy. Clean warm-start training always runs the run_mode profile's own layer. Recorded + log-verified in every ADAPT_OK manifest."
+        required: false
+        default: "full"
+      settings_profile:
+        description: "Learning-settings profile for the ADAPTATION step (config phase2.adapt_settings): record (runs-of-record default) | paired (both arms share one random stream) | aligned (paired + reward limit 200). Passed explicitly to the adaptation JVM and read back from its log; recorded in every ADAPT_OK manifest."
+        required: false
+        default: "record"
+      publish_results:
+        description: "Push consolidated Phase-2 results to the 'results' branch"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+# Each dispatch runs in its own concurrency group: GitHub keeps at most one
+# pending run per group and CANCELS earlier pending ones, which would silently
+# drop queued dispatches. max-parallel of each matrix bounds the runner load
+# instead.
+concurrency:
+  group: phase2-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  RUN_MODE:       ${{ github.event.inputs.run_mode       || 'phase1_v2_kg_only' }}
+  ADAPT_PROFILES: ${{ github.event.inputs.adapt_profiles || 'lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv,lab3_f1dead_z2,lab3_f1inv_z2,lab3_f1bdead,lab3_f1binv,lab2_f1bdead,lab2_f1binv' }}
+  SEEDS:          ${{ github.event.inputs.seeds          || '1,2,3,4,5,6,7,8,9,10' }}
+  ADAPT_EPISODES: ${{ github.event.inputs.adapt_episodes || '0' }}
+  KNOWLEDGE_LAYER: ${{ github.event.inputs.knowledge_layer || 'full' }}
+  SETTINGS_PROFILE: ${{ github.event.inputs.settings_profile || 'record' }}
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  setup:
+    name: Compile & build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      profiles_json: ${{ steps.profiles.outputs.json }}
+      parents_json:  ${{ steps.parents.outputs.json }}
+      seeds_json:    ${{ steps.seeds.outputs.json }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate knowledge-layer input (fail fast, pre-matrix)
+        shell: bash
+        run: |
+          case "${{ env.KNOWLEDGE_LAYER }}" in
+            full|brick|redundancy) echo "knowledge_layer=${{ env.KNOWLEDGE_LAYER }}" ;;
+            *) echo "::error::knowledge_layer must be full|brick|redundancy, got '${{ env.KNOWLEDGE_LAYER }}'"; exit 1 ;;
+          esac
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Compile classes (with retry on JitPack flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::compile attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          exit $rc
+      - name: Upload compiled build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-classes
+          path: |
+            build/classes
+            build/resources
+            build/generated
+          if-no-files-found: error
+          retention-days: 1
+      - name: Materialise faulty-profile list
+        id: profiles
+        shell: bash
+        run: |
+          json=$(echo "${{ env.ADAPT_PROFILES }}" | tr ',' '\n' | sed '/^$/d' | jq -R . | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "profiles=$json"
+      - name: Derive unique parent labs for clean warm-start training
+        id: parents
+        shell: bash
+        run: |
+          sel=$(echo "${{ env.ADAPT_PROFILES }}" | tr ',' '\n' | sed '/^$/d' | jq -R . | jq -sc .)
+          json=$(jq -c --argjson sel "$sel" \
+            '[.phase2.parent_profile | to_entries[] | select(.key as $k | $sel | index($k)) | .value] | unique' \
+            config/run_config.json)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "parents=$json"
+      - name: Materialise seed list
+        id: seeds
+        shell: bash
+        run: |
+          json=$(echo "${{ env.SEEDS }}" | tr ',' '\n' | sed '/^$/d' | jq -R 'tonumber' | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "seeds=$json"
+
+  # ────────────────────────────────────────────────────────────────────────
+  train_clean:
+    name: clean ${{ matrix.parent }} stereo=${{ matrix.stereo }} seed=${{ matrix.seed }}
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 180   # phase1 (3000 eps) ~50 min/cell; 3x safety margin
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        parent: ${{ fromJson(needs.setup.outputs.parents_json) }}
+        stereo: ["true", "false"]
+        seed:   ${{ fromJson(needs.setup.outputs.seeds_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Warm Gradle deps (retry on JitPack/Maven-Central flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            # validateTurtle is a JavaExec on sourceSets.main.runtimeClasspath,
+            # so this resolves the RUNTIME dependency graph inside the retry
+            # loop — the cell's Gradle run then starts against a fully warm
+            # cache, so a transient download error from Maven Central cannot
+            # end the cell in the middle of its run.
+            ./gradlew --no-daemon classes validateTurtle
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
+      - name: Train clean warm-start baseline (with early-failure retry)
+        shell: pwsh
+        run: |
+          $ok = $false
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $start = Get-Date
+            ./run_full_project.ps1 `
+              -RunMode ${{ env.RUN_MODE }} `
+              -OnlyProfiles ${{ matrix.parent }} `
+              -OnlyStereo ${{ matrix.stereo }} `
+              -RunSeed ${{ matrix.seed }} `
+              -SkipBenchmark `
+              -SkipPreflight
+            $rc = $LASTEXITCODE
+            if ($rc -eq 0) { $ok = $true; break }
+            $elapsedMin = ((Get-Date) - $start).TotalMinutes
+            if ($attempt -eq 2 -or $elapsedMin -gt 5) {
+              Write-Host "::error::clean training failed after $([math]::Round($elapsedMin,1)) min (rc=$rc)"
+              break
+            }
+            Write-Host "::warning::clean training failed early ($([math]::Round($elapsedMin,1)) min); retrying once"
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ok) { exit 1 }
+      - name: Upload clean warm-start Q-tables
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-${{ matrix.parent }}-stereo-${{ matrix.stereo }}-seed-${{ matrix.seed }}
+          # The training_stereo_* directory carries the protocol-v2 provenance:
+          # TRAINING_OK.json plus the per-episode metrics and first-goal CSVs.
+          path: |
+            qtable_final_stereotypes_${{ matrix.stereo }}_${{ matrix.parent }}*.csv
+            benchmark/results/${{ matrix.parent }}/training_stereo_${{ matrix.stereo }}/**
+            log/train_${{ matrix.parent }}_stereo_${{ matrix.stereo }}.log
+          if-no-files-found: error
+          retention-days: 30
+
+  # ────────────────────────────────────────────────────────────────────────
+  adapt:
+    name: adapt ${{ matrix.profile }} mode=${{ matrix.mode }} seed=${{ matrix.seed }}
+    needs: [setup, train_clean]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
+        mode:    ["ql_true", "ql_false"]
+        seed:    ${{ fromJson(needs.setup.outputs.seeds_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Resolve warm-start boolean for this mode
+        id: m
+        shell: bash
+        run: |
+          if [ "${{ matrix.mode }}" = "ql_true" ]; then echo "bool=true" >> "$GITHUB_OUTPUT"; else echo "bool=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Download matching clean warm-start Q-tables (all parents, this bool+seed)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: clean-*-stereo-${{ steps.m.outputs.bool }}-seed-${{ matrix.seed }}
+          path: .
+          merge-multiple: true
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Warm Gradle deps (retry on JitPack/Maven-Central flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            # validateTurtle is a JavaExec on sourceSets.main.runtimeClasspath,
+            # so this resolves the RUNTIME dependency graph too — taskAdapt then
+            # runs against a fully warm cache. ('classes' alone warms only the
+            # compile classpath, and taskAdapt itself has no retry.)
+            ./gradlew --no-daemon classes validateTurtle
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
+      - name: Scrub stray result CSVs from the workspace
+        # The aggregate job rebuilds the per-seed results first-copy-wins, so
+        # a stray result file in the checkout (for example a committed
+        # leftover of a local run) could shadow a cell's real result. Delete
+        # every such file before the cell runs.
+        shell: bash
+        run: |
+          rm -f recovery_stereotypes_*.csv metrics_adapted_stereotypes_*.csv qtable_adapted_stereotypes_*.csv ADAPT_OK_stereotypes_*.json
+          echo "workspace scrubbed"
+      - name: Regenerate faulty Node-RED flows (deterministic from clean flows)
+        shell: pwsh
+        run: |
+          ./simulator/generate_faulty_flows.ps1
+      - name: Run adapt cell (fault detect → blacklist → warm restart → re-learn)
+        shell: pwsh
+        run: |
+          $ep = [int]"${{ env.ADAPT_EPISODES }}"
+          ./run_phase2_adapt.ps1 `
+            -AdaptProfiles ${{ matrix.profile }} `
+            -Modes ${{ matrix.mode }} `
+            -Episodes $ep `
+            -RunSeed ${{ matrix.seed }} `
+            -KnowledgeLayer ${{ env.KNOWLEDGE_LAYER }} `
+            -SettingsProfile ${{ env.SETTINGS_PROFILE }} `
+            -WatchdogIdleSec 1800
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Upload adapt artefacts (recovery metric + adapted policy + log)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adapt-${{ matrix.profile }}-${{ matrix.mode }}-seed-${{ matrix.seed }}
+          # Scoped to THIS cell's own files (qtable_suffix == "_<profile>"), so
+          # an artifact can never carry another cell's CSVs into the aggregate
+          # (see the scrub step above for the failure mode this prevents).
+          path: |
+            recovery_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            qtable_adapted_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            metrics_adapted_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            ADAPT_OK_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.json
+            log/adapt_${{ matrix.profile }}_${{ matrix.mode }}.log
+            log/adapt_${{ matrix.profile }}_${{ matrix.mode }}.err.log
+            run_phase2_adapt.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  # ────────────────────────────────────────────────────────────────────────
+  aggregate:
+    name: Aggregate recovery & publish
+    needs: adapt
+    # Aggregate whatever artefacts exist even if a single adapt leg flaked
+    # (e.g. a transient JitPack timeout). The reconstruct + analysis steps
+    # already tolerate missing seeds, so one bad cell never blocks the run.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis deps
+        run: pip install numpy scipy
+      - name: Download all adapt artefacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: adapt-*
+          path: _artifacts/adapt
+      - name: Download all clean warm-start artefacts (parent provenance)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: clean-*
+          path: _artifacts/clean
+      - name: Reconstruct per-seed recovery layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mkdir -p recovery_root
+          for d in _artifacts/adapt/*/; do
+            name=$(basename "$d")
+            seed=$(echo "$name" | sed -nE 's/.*-seed-([0-9]+)$/\1/p')
+            if [ -z "$seed" ]; then echo "WARN: no seed in $name"; continue; fi
+            mkdir -p "recovery_root/seed${seed}"
+            # recovery_* holds the outcome measure; metrics_adapted_* carries
+            # the per-episode GoalReached series, which shows whether a
+            # "recovered" (stable) policy also reaches the goal; ADAPT_OK_* is
+            # the cell's receipt.
+            for f in "${d}"recovery_stereotypes_*.csv "${d}"metrics_adapted_stereotypes_*.csv "${d}"ADAPT_OK_stereotypes_*.json; do
+              [ -e "$f" ] || continue
+              cp -n "$f" "recovery_root/seed${seed}/" 2>/dev/null || true
+            done
+          done
+          echo "-- recovery layout --"
+          find recovery_root -type f | sort
+      - name: Aggregate Phase-2 recovery (per-cell CI + paired bootstrap, BH-FDR)
+        run: |
+          python analysis/phase2_recovery.py \
+            --root recovery_root \
+            --out analysis/out
+      - name: Record immutable workflow inputs
+        shell: bash
+        run: |
+          python analysis/write_workflow_provenance.py \
+            --out analysis/out/workflow_inputs.json \
+            --workflow .github/workflows/phase2.yml \
+            --run-id "${{ github.run_id }}" \
+            --sha "${{ github.sha }}" \
+            --ref "${{ github.ref }}" \
+            --run-mode "$RUN_MODE" \
+            --profiles "$ADAPT_PROFILES" \
+            --seeds "$SEEDS" \
+            --knowledge-layer "$KNOWLEDGE_LAYER" \
+            --publish-results "${{ github.event.inputs.publish_results }}"
+      - name: Generate job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "# Phase 2 (fault detection / blacklist / re-learn) — summary"
+            echo ""
+            echo "**Profiles:** \`${{ env.ADAPT_PROFILES }}\`"
+            echo "**Seeds:** \`${{ env.SEEDS }}\`"
+            echo "**Clean warm-start mode:** \`${{ env.RUN_MODE }}\`"
+            echo "**Adapt episodes:** \`${{ env.ADAPT_EPISODES }}\` (0 = profile default)"
+            echo "**Knowledge layer (adapt step):** \`${{ env.KNOWLEDGE_LAYER }}\`"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo ""
+            echo "Headline: RecoveryEpisodes = ReconvergeEpisode − DetectEpisode (lower = faster)."
+            echo "Thesis claim: recovery(ql_true) < recovery(ql_false)."
+            echo ""
+            if [ -f analysis/out/phase2_recovery_ci.csv ]; then
+              echo "## phase2_recovery_ci.csv (per profile × arm, 95% CI)"
+              echo '```'
+              cat analysis/out/phase2_recovery_ci.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/phase2_recovery_paired.csv ]; then
+              echo "## phase2_recovery_paired.csv (ql_true − ql_false, paired bootstrap + BH-FDR)"
+              echo '```'
+              cat analysis/out/phase2_recovery_paired.csv
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload consolidated Phase-2 artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-consolidated
+          path: |
+            analysis/out/**
+            recovery_root/**
+            _artifacts/clean/**
+          retention-days: 90
+      - name: Publish to 'results' branch
+        if: ${{ github.event.inputs.publish_results == 'true' }}
+        shell: bash
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          set -euo pipefail
+          git config user.name  "$GIT_AUTHOR_NAME"
+          git config user.email "$GIT_AUTHOR_EMAIL"
+          ts=$(date -u +%Y%m%d-%H%M%S)
+          branch="results"
+          tmp=$(mktemp -d)
+          cp -r analysis/out "$tmp/phase2_out"
+          cp -r recovery_root "$tmp/phase2_recovery_root" 2>/dev/null || true
+          git fetch origin "$branch" || true
+          if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+            git checkout -B "$branch" "origin/$branch"
+          else
+            git checkout --orphan "$branch"
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          dest="phase2/${{ github.run_id }}-${ts}"
+          mkdir -p "$dest"
+          cp -r "$tmp/phase2_out" "$dest/analysis_out"
+          cp -r "$tmp/phase2_recovery_root" "$dest/recovery_root" 2>/dev/null || true
+          git add "$dest"
+          git commit -m "Phase 2 recovery results: run ${{ github.run_id }} ($ts)" || echo "nothing to commit"
+          git push origin "$branch"

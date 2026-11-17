@@ -1,0 +1,30 @@
+/*
+  KG-QL: Process-Dynamics Illuminance Controller Agent
+
+  JaCaMo project file for the Gradle task "taskDynamics".
+
+  Starts one BDI agent, illuminance_controller_agent_dynamics
+  (src/agt/illuminance_controller_agent_dynamics.asl), which learns the response
+  delay of each actuator instead of a Q-table.
+
+  To run: ./gradlew taskDynamics -Pprofile=lab2_slow -Pmode=ql_true
+          (while the matching SLOW Node-RED simulator flow is running:
+           lab2_slow -> port 1895, lab3_slow -> port 1896)
+
+  The agent probes every actuator to learn its response delay (fast task lamp
+  ~0 ticks; slow motorized blind ~12 ticks), writes the learned ws:responseDelay
+  values to a separate Turtle file (no program reads it back), and then uses
+  the measured delays, held in memory, to satisfy time-bounded goals ("reach the target illuminance within D seconds").
+
+  Options:
+    -Pprofile=<id>   Slow lab profile (system property active.profile).
+    -Pmode=ql_true   Knowledge-guided planner: uses the learned per-actuator delay.
+    -Pmode=ql_false  Plain planner: assumes zero delay (no dynamics knowledge).
+                     The mode is passed as the system property dynamics.mode.
+*/
+
+mas lab_dynamics {
+
+    agent illuminance_controller_agent_dynamics
+
+}

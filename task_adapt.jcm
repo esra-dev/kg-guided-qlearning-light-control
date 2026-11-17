@@ -1,0 +1,28 @@
+/*
+  KG-QL: Fault-Adaptation Illuminance Controller Agent
+
+  JaCaMo project file for the Gradle task "taskAdapt".
+
+  Starts one BDI agent, illuminance_controller_agent_adapt
+  (src/agt/illuminance_controller_agent_adapt.asl). It warm-loads the Q-table
+  trained on the clean lab (the clean profile is given by adapt_source/2 in
+  src/agt/lab_profiles.asl), runs in a variant of the lab in which the simulator
+  has a dead or inverted component, detects the injected fault, blacklists the
+  defective component and re-learns over the remaining components.
+
+  To run: ./gradlew taskAdapt -Pprofile=lab2_f1dead -Pmode=ql_true
+          (while the matching FAULTY Node-RED simulator flow is running)
+
+  Options:
+    -Pprofile=<id>          Faulty lab profile (system property active.profile).
+    -Pmode=ql_true|ql_false Knowledge-guided or plain re-learning (system
+                            property adapt.mode; default ql_true).
+    -Padapt.episodes=<N>    Optional re-learning budget (system property
+                            adapt.episodes), for example for a short test run.
+*/
+
+mas lab_adapt {
+
+    agent illuminance_controller_agent_adapt
+
+}

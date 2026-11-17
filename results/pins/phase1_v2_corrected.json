@@ -1,0 +1,244 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase1_v2_corrected",
+  "archive": "results/phase1_v2_corrected",
+  "role": "accepted",
+  "phase": "1",
+  "description": "Phase 1 corrected campaign (protocol phase1-v2): four registered arms and the Brick-structure-only control arm (run 42834963612).",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md",
+    "SHA256SUMS.csv"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase1.yml",
+    "all_runs": {
+      "profiles": [
+        "lab1",
+        "lab2",
+        "lab3"
+      ],
+      "publish_results": true,
+      "seeds": {
+        "int_range": [
+          1,
+          20
+        ]
+      },
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "29848584965": {
+        "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115",
+        "ref": "refs/heads/phase1-correction-2026-07-21",
+        "run_mode": "phase1_v2_kg_only"
+      },
+      "29848587274": {
+        "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115",
+        "ref": "refs/heads/phase1-correction-2026-07-21",
+        "run_mode": "phase1_v2_redundancy_only"
+      },
+      "29848589682": {
+        "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115",
+        "ref": "refs/heads/phase1-correction-2026-07-21",
+        "run_mode": "phase1_v2_baseline"
+      },
+      "29848592010": {
+        "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115",
+        "ref": "refs/heads/phase1-correction-2026-07-21",
+        "run_mode": "phase1_v2_pbrs_only"
+      },
+      "42834963612": {
+        "head_sha": "140906f2b325aefdb32b6c00ffaae063507f215e",
+        "ref": "refs/heads/phase234-correction-2026-07-22",
+        "run_mode": "phase1_v2_brick_only"
+      }
+    }
+  },
+  "tables": [
+    {
+      "file": "analysis/registered/phase1_v2_registered_family.csv",
+      "key": [
+        "registered_test"
+      ],
+      "rows": [
+        "1_arm_c_lab2_auc_goal",
+        "2_redundancy_lab2_auc_goal",
+        "3_arm_c_minus_redundancy_lab2",
+        "4_arm_c_lab3_mean_first_goal_presentations",
+        "5_arm_c_lab3_avg_cycling"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "bh_family_m": "5",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "p_sign_exact_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m5": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "1_arm_c_lab2_auc_goal": {
+          "mean_paired_difference": {
+            "float": 0.0037
+          }
+        },
+        "2_redundancy_lab2_auc_goal": {
+          "mean_paired_difference": {
+            "float": 0.002583333333333315
+          }
+        },
+        "3_arm_c_minus_redundancy_lab2": {
+          "mean_paired_difference": {
+            "float": 0.0011166666666666825
+          }
+        },
+        "4_arm_c_lab3_mean_first_goal_presentations": {
+          "mean_paired_difference": {
+            "float": 0.11
+          }
+        },
+        "5_arm_c_lab3_avg_cycling": {
+          "mean_paired_difference": {
+            "float": 0.07375
+          }
+        }
+      }
+    },
+    {
+      "file": "analysis/registered/phase1_v2_knowledge_ladder_family.csv",
+      "key": [
+        "registered_test"
+      ],
+      "rows": [
+        "1_arm_c_minus_brick_lab2_auc_goal",
+        "2_arm_c_minus_brick_lab3_auc_goal"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "bh_family_m": "2",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "p_sign_exact_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m2": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "1_arm_c_minus_brick_lab2_auc_goal": {
+          "mean_paired_difference": {
+            "float": 0.0
+          },
+          "registered_category": "null"
+        },
+        "2_arm_c_minus_brick_lab3_auc_goal": {
+          "mean_paired_difference": {
+            "float": 0.0038500000000000144
+          },
+          "registered_category": "elementary_adds"
+        }
+      }
+    }
+  ],
+  "json_files": [
+    {
+      "file": "analysis/registered/phase1_v2_decomposition.json",
+      "values": {
+        "category": "more_than_two_thirds",
+        "redundancy_share": {
+          "float": 0.6981981981981937
+        }
+      }
+    },
+    {
+      "file": "analysis/phase1_v2_protocol_gate_summary.json",
+      "values": {
+        "protocol_version": "phase1-v2",
+        "all_gates_pass": true
+      },
+      "lists": [
+        {
+          "path": "runs",
+          "key": "run_id",
+          "rows": [
+            "29848584965",
+            "29848587274",
+            "29848589682",
+            "29848592010",
+            "42834963612"
+          ],
+          "all_rows": {
+            "training_cells": 120,
+            "benchmark_cells": 180,
+            "fixed_horizons": [
+              3000
+            ],
+            "scenario_fallback_count": 0,
+            "schedule_pair_mismatches": 0,
+            "protocol_versions": [
+              "phase1-v2"
+            ],
+            "metric_schemas": [
+              "phase1-benchmark-v2"
+            ],
+            "paired_rng_versions": [
+              "common-seed-v1"
+            ]
+          },
+          "row_values": {
+            "29848584965": {
+              "run_mode": "phase1_v2_kg_only",
+              "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115"
+            },
+            "29848587274": {
+              "run_mode": "phase1_v2_redundancy_only",
+              "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115"
+            },
+            "29848589682": {
+              "run_mode": "phase1_v2_baseline",
+              "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115"
+            },
+            "29848592010": {
+              "run_mode": "phase1_v2_pbrs_only",
+              "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115"
+            },
+            "42834963612": {
+              "run_mode": "phase1_v2_brick_only",
+              "head_sha": "140906f2b325aefdb32b6c00ffaae063507f215e"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "SHA256SUMS.csv",
+        "base": "."
+      },
+      {
+        "glob": "run_*/analysis/out/SHA256SUMS.csv",
+        "base": "../.."
+      }
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase1_v2.py",
+      "{archive}"
+    ],
+    "data": "tracked",
+    "requires": [
+      "{archive}/run_*/benchmark"
+    ],
+    "approx_seconds": 240
+  }
+}

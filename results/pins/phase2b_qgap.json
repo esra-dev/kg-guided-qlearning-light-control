@@ -1,0 +1,22 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase2b_qgap",
+  "archive": "results/exploratory/phase2b_qgap",
+  "role": "exploratory",
+  "phase": "2",
+  "description": "Exploratory retrospective Q-gap analysis of the Phase 2 corrected runs.",
+  "required_files": [
+    "analysis/source_manifest.json",
+    "analysis/PHASE2_QGAP_RETROSPECTIVE_RESULTS.md"
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "analysis/SHA256SUMS.csv",
+        "base": "."
+      }
+    ]
+  },
+  "reproducer": null,
+  "reproducer_note": "analysis/reproduce_phase2_qgap.py needs the extracted source artifacts (about 2.1 GB, not in the repository) and a committed implementation; local only."
+}

@@ -1,0 +1,576 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix brick:  <https://brickschema.org/schema/Brick#> .
+@prefix elem:   <http://www.w3id.org/elementary#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix qudtqk: <http://qudt.org/vocab/quantitykind/> .
+@prefix sosa:   <http://www.w3.org/ns/sosa/> .
+
+@prefix lab:    <http://example.org/was/lab#> .
+@prefix ws:     <http://example.org/was/lab/stereotypes#> .
+
+# ===========================================================================
+#  Knowledge graph of the dual monitor lab, variant "info-only": the
+#  monitors' stereotype describes only their displayed information, not
+#  their light.
+# ---------------------------------------------------------------------------
+#  Used by the profiles (src/agt/lab_profiles.asl, ont([...])):
+#    labmon2_infoonly                 Phase 2, healthy parent room
+#    labmon2_infoonly_f2dead_lowsun   Phase 2, both task lamps dead, sun 100
+#  The file is self-contained: the profiles load it alone. Device
+#  description: interactions-labmon2.ttl (shared with labmon2).
+#
+#  Room: the same flows and port as labmon2 (simulator_flow_labmon2.json and,
+#  for the fault profile, simulator_flow_labmon2_f2dead_lowsun.json; port
+#  1900), for each zone i = 1, 2:
+#     ZiLevel = 25 + (ZiLight ? 400 : 0) + (ZiMonitor ? 200 : 0)
+#                  + (ZiBlinds ? 0.50 * Sunshine : 0)
+#  Target rank 3 (300 lux or more) in both zones. At sun 0 and 100 only the
+#  lamp reaches it. In the fault profile both lamps add 0 and every start
+#  situation (benchmark/train_scenarios_labmon2_lowsun.json) has sun 100, so
+#  the best a zone can reach is 25 + 200 + 50 = 275 lux, rank 2, and the
+#  monitors are the devices that make the difference between rank 1 and 2.
+#
+#  What differs from building_7_dualmonitor.ttl: the monitors really add
+#  200 lux each, but this graph does not say so. ws:pm_monitor_operation has
+#  only ws:displayed_information as dependent variable (no ws:luminiscence,
+#  no elem:increases); ws:MonitorStereotype has no light outlet; both
+#  monitors are brick:Equipment (not brick:Luminaire), are not part of the
+#  lighting stream and have no brick:feeds to the light sensors. The sibling
+#  variant building_7_dualmonitor_nostereo.ttl gives the monitors no
+#  stereotype at all.
+#
+#  Effect on the reasoner (StereotypeReasoner.discoverActuators): the
+#  monitors' ON and OFF actions are still in the action list, because that
+#  list comes from the WoT mapping and component actions (sections 8 and 10).
+#  In the full knowledge layer the enrichment query finds no illuminance
+#  dependent variable for them, so they stay "KG-silent": no zone, no
+#  starting value beyond the rule for redundant actions, no fault check, no
+#  predicted effect; both arms can learn the monitors' effect only from
+#  reward. The lamps and blinds are described as in labmon2. The brick layer
+#  reads only Brick, SOSA/QUDT and WoT parts (docs/ARCHITECTURE.md, section
+#  5.4); it would count each monitor as acting on its zone, because the
+#  monitor is located in a zone with an illuminance sensor. The fault-stage
+#  agent finds the best reachable rank by trying the surviving devices in the
+#  simulator, so that step does not depend on the graph.
+#
+#  Contents: Brick structure as in labmon2; Elementary stereotypes
+#  ws:LampIncandescentStereotype, ws:MonitorStereotype (info only),
+#  ws:BlindStereotype (ws:ivMinRank 1), ws:LightSensorStereotype,
+#  ws:WeatherStationStereotype, ws:OutsideStereotype; project terms (ws:) for
+#  the WoT mapping, rank bounds and the state layout [Z1Level, Z2Level,
+#  Z1Light, Z2Light, Z1Monitor, Z2Monitor, Z1Blinds, Z2Blinds, Sunshine]
+#  (9 entries, 4096 states, the same as labmon2).
+# ===========================================================================
+
+
+# ===========================================================================
+# Property declarations (the file is loaded alone, so it declares the
+# properties it uses itself)
+# ===========================================================================
+
+brick:feeds   owl:equivalentProperty elem:feeds .
+sosa:observes owl:equivalentProperty elem:observes .
+
+elem:increases a owl:ObjectProperty ;
+    rdfs:label "increases (Causes shortcut)" .
+
+ws:zoneIndex a owl:DatatypeProperty ;
+    rdfs:label "Zone index" ; rdfs:range xsd:integer .
+
+ws:ivMinRank a owl:DatatypeProperty ;
+    rdfs:label "Minimum effective IV rank" ; rdfs:range xsd:integer .
+
+ws:actionValue a owl:DatatypeProperty ;
+    rdfs:label "Action boolean value" ; rdfs:range xsd:boolean .
+
+ws:rankBound_1 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_2 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_3 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+
+ws:hasWoTActionSemanticType a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:hasWoTStateSemanticType  a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:stateVecIndex   a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateDomainSize a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateSlotRole   a owl:DatatypeProperty ; rdfs:range xsd:string .
+
+
+# ===========================================================================
+# 1.  PHYSICAL MECHANISMS
+# ===========================================================================
+
+# Incandescent lamp: Causes mechanism (no independent variable → unconditional
+# positive effect on indoor illuminance).
+ws:pm_incandescent_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_incandescent_light_emission" ;
+    elem:hasManipulatedVariable ws:electrical_power_input ;
+    elem:hasDependentVariable   ws:luminiscence ;
+    elem:increases              ws:luminiscence .
+
+# Monitor operation, info-only. The mechanism describes the monitor's primary
+# output (displayed on-screen information) and nothing else. The light side
+# effect (+200 lux in the simulator) is deliberately absent: no
+# ws:luminiscence dependent variable, no elem:increases claim. The reasoner's
+# enrichment query (dependent variable with quantity Illuminance) therefore
+# matches nothing for the monitors; their actions come only from the WoT
+# mapping in section 10 and stay KG-silent.
+ws:pm_monitor_operation a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_monitor_operation (info-only)" ;
+    rdfs:comment """
+        A computer monitor converts electrical power into displayed visual
+        information — its PRIMARY, intended output. This stereotype variant
+        documents ONLY that primary function; the modest room-illuminance rise
+        caused by the screen backlight is NOT captured here (Phase 2.6
+        misdocumented-KG variant A). The physics simulator still applies the
+        light side-effect, so reality deviates from the documentation.
+    """ ;
+    elem:hasManipulatedVariable ws:monitor_power_input ;
+    elem:hasDependentVariable   ws:displayed_information .   # primary output only; the light side effect is not described
+
+# Daylight ingress through a window blind: a mechanism with an independent
+# variable (outdoor illuminance), so the open blind adds light only when there
+# is sun. ws:ivMinRank 1: the reasoner expects an effect from sun rank 1 on.
+ws:pm_daylight_ingress a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_daylight_ingress through blind aperture" ;
+    elem:hasIndependentVariable ws:outdoorIlluminance ;
+    elem:hasManipulatedVariable ws:blindApertureRatio ;
+    elem:hasDependentVariable   ws:luminiscence ;
+    ws:ivMinRank                1 .
+
+# Indoor illuminance sensing (passive measurement; not actuatable).
+ws:illuminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Illuminance sensing" ;
+    elem:hasIndependentVariable ws:luminiscence ;
+    elem:hasDependentVariable   ws:sensedIlluminance .
+
+ws:pm_outdoor_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_outdoor_light_emission" ;
+    elem:hasDependentVariable   ws:outdoorIlluminance .
+
+ws:outdoorIlluminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Outdoor illuminance sensing" ;
+    elem:hasIndependentVariable ws:outdoorIlluminance ;
+    elem:hasDependentVariable   ws:sensedOutdoorIlluminance .
+
+
+# ===========================================================================
+# 2.  PROCESS VARIABLES
+# ===========================================================================
+
+ws:electrical_power_input a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to light" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+ws:monitor_power_input a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to monitor" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+# The monitor's described (and, in this variant, only) output. Deliberately
+# not an Illuminance quantity, so the enrichment query's FILTER EXISTS
+# { ?dv elem:hasQuantity Illuminance } does not match the monitor mechanism.
+ws:displayed_information a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Displayed on-screen information" ;
+    elem:dealsWithStuff  ws:VisualInformation ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:DimensionlessRatio .
+
+ws:outdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Outdoor illuminance (sunshine)" ;
+    elem:dealsWithStuff  ws:photons ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:blindApertureRatio a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Blind aperture ratio (open vs. closed)" ;
+    elem:dealsWithStuff  ws:MechanicalPosition ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:DimensionlessRatio .
+
+ws:luminiscence a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Indoor illuminance level" ;
+    elem:dealsWithStuff  ws:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed indoor illuminance signal" ;
+    elem:dealsWithStuff  ws:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "100"^^xsd:decimal ;
+    ws:rankBound_3       "300"^^xsd:decimal .
+
+ws:sensedOutdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed outdoor illuminance signal" ;
+    elem:dealsWithStuff  ws:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "200"^^xsd:decimal ;
+    ws:rankBound_3       "600"^^xsd:decimal .
+
+
+# ===========================================================================
+# 3.  PHYSICAL STUFF + STREAM KINDS
+# ===========================================================================
+
+ws:photons a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visible light (photons)" .
+
+ws:MechanicalPosition a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Mechanical position / aperture" .
+
+ws:VisualInformation a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visual information (pixels on screen)" .
+
+ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Indoor lighting stream" .
+
+ws:OutdoorSunlightStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Outdoor sunlight stream" .
+
+
+# ===========================================================================
+# 4.  COMPONENT STEREOTYPES
+# ===========================================================================
+
+ws:LampIncandescentStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Incandescent lamp stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_incandescent_light_emission ;
+    elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_light_photon_outlet .
+
+ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of incandescent lamp" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:electrical_power_input .
+
+ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Photon (light) outlet of incandescent lamp" ;
+    elem:dealsWithStuff        ws:photons ;
+    elem:isRelatedToVariable   ws:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+# Info-only monitor stereotype: the light side effect is missing. Compared
+# with ws:MonitorStereotype in building_7_dualmonitor.ttl, this variant has no
+# photon outlet connection point: as described here, the monitor consumes
+# power and shows information, nothing more.
+ws:MonitorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Computer monitor stereotype (info-only, light side-effect undocumented)" ;
+    rdfs:comment """
+        A monitor (display screen) driven by electrical power whose documented
+        function is showing information. In reality the screen backlight also
+        raises room illuminance, but that side-effect is absent from this
+        stereotype (Phase 2.6 misdocumented-KG variant A) — so the KG does NOT
+        advertise the monitor as a light source the agent could fall back on.
+    """ ;
+    elem:hasPhysicalMechanism ws:pm_monitor_operation ;
+    elem:hasConnectionPoint  ws:cp_monitor_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_monitor_info_outlet .
+
+ws:cp_monitor_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of monitor" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:monitor_power_input .
+
+ws:cp_monitor_info_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "On-screen information outlet of monitor (documented primary)" ;
+    elem:dealsWithStuff        ws:VisualInformation ;
+    elem:isRelatedToVariable   ws:displayed_information .
+
+ws:BlindStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Window blind stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_daylight_ingress ;
+    elem:hasConnectionPoint  ws:cp_blind_outdoor_inlet ;
+    elem:hasConnectionPoint  ws:cp_blind_actuator_inlet ;
+    elem:hasConnectionPoint  ws:cp_blind_light_outlet .
+
+ws:cp_blind_outdoor_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Outdoor sunlight inlet of blind" ;
+    elem:dealsWithStuff        ws:photons ;
+    elem:isRelatedToVariable   ws:outdoorIlluminance ;
+    elem:suitableFor           ws:OutdoorSunlightStream .
+
+ws:cp_blind_actuator_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Actuator inlet of blind (Up / Down command)" ;
+    elem:dealsWithStuff ws:MechanicalPosition ;
+    elem:manipulates    ws:blindApertureRatio .
+
+ws:cp_blind_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Indoor light outlet of blind" ;
+    elem:dealsWithStuff        ws:photons ;
+    elem:isRelatedToVariable   ws:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+ws:LightSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Indoor light sensor stereotype" ;
+    elem:hasPhysicalMechanism ws:illuminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_signal_outlet .
+
+ws:cp_lightsensor_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of indoor light sensor" ;
+    elem:dealsWithStuff      ws:photons ;
+    elem:isRelatedToVariable ws:luminiscence ;
+    elem:suitableFor         ws:IndoorLightingStream .
+
+ws:cp_lightsensor_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of indoor light sensor" ;
+    elem:dealsWithStuff      ws:photons ;
+    elem:isRelatedToVariable ws:sensedIlluminance .
+
+ws:WeatherStationStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Weather station (outdoor illuminance sensor) stereotype" ;
+    elem:hasPhysicalMechanism ws:outdoorIlluminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_ws_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_ws_signal_outlet .
+
+ws:cp_ws_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of weather station" ;
+    elem:dealsWithStuff      ws:photons ;
+    elem:isRelatedToVariable ws:outdoorIlluminance ;
+    elem:suitableFor         ws:OutdoorSunlightStream .
+
+ws:cp_ws_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of weather station" ;
+    elem:dealsWithStuff      ws:photons ;
+    elem:isRelatedToVariable ws:sensedOutdoorIlluminance .
+
+ws:OutsideStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Outdoor light source (sun) stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_outdoor_light_emission ;
+    elem:hasConnectionPoint  ws:cp_outside_light_outlet .
+
+ws:cp_outside_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Outdoor light outlet (sun)" ;
+    elem:dealsWithStuff      ws:photons ;
+    elem:isRelatedToVariable ws:outdoorIlluminance ;
+    elem:suitableFor         ws:OutdoorSunlightStream .
+
+
+# ===========================================================================
+# 5.  BUILDING TOPOLOGY (two INDEPENDENT zones — NO cross-zone coupling)
+# ===========================================================================
+
+lab:Workstation a owl:Class ;
+    rdfs:label "Workstation" ;
+    rdfs:subClassOf brick:Space .
+
+lab:DualMonitorBuilding a brick:Building ;
+    rdfs:label "Labmon2 (Info-Only Stereotype) Building" ;
+    brick:hasPart lab:Lab .
+
+lab:Lab a brick:Room ;
+    rdfs:label "Labmon2 room" ;
+    brick:hasPart lab:Zone1 ;
+    brick:hasPart lab:Zone2 .
+
+lab:Zone1 a lab:Workstation ;
+    rdfs:label "Workstation 1" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 1 .
+
+lab:Zone2 a lab:Workstation ;
+    rdfs:label "Workstation 2" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 2 .
+
+
+# ===========================================================================
+# 6.  COMPONENT INSTANCES
+# ===========================================================================
+
+lab:Indoor_Illuminance_Sensor_Equipment a owl:Class ;
+    rdfs:label "Indoor illuminance sensor equipment" ;
+    rdfs:subClassOf brick:Sensor_Equipment .
+
+lab:CeilingLight_Z1 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Primary incandescent task lamp – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    ws:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:CeilingLight_Z2 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Primary incandescent task lamp – Workstation 2" ;
+    brick:isLocatedIn lab:Zone2 ;
+    ws:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+# The monitors as this graph describes them: office equipment, not
+# luminaires, not part of the lighting stream, not feeding the light sensors.
+# The simulator still adds 200 lux to a monitor's zone when it is on.
+lab:Monitor_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Computer monitor (documented as display only) – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    ws:hasBehavioralStereotype ws:MonitorStereotype .
+
+lab:Monitor_Z2 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Computer monitor (documented as display only) – Workstation 2" ;
+    brick:isLocatedIn lab:Zone2 ;
+    ws:hasBehavioralStereotype ws:MonitorStereotype .
+
+lab:Blind_Z1 a brick:Blind, elem:Actuator ;
+    rdfs:label "Window blind – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    ws:hasBehavioralStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:Blind_Z2 a brick:Blind, elem:Actuator ;
+    rdfs:label "Window blind – Workstation 2" ;
+    brick:isLocatedIn lab:Zone2 ;
+    ws:hasBehavioralStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:LightSensor_Z1 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    sosa:observes     lab:IndoorIlluminance_Z1 ;
+    ws:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:LightSensor_Z2 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 2" ;
+    brick:isLocatedIn lab:Zone2 ;
+    sosa:observes     lab:IndoorIlluminance_Z2 ;
+    ws:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:WeatherStation a brick:Weather_Station, elem:Sensor ;
+    rdfs:label "Outdoor weather station" ;
+    brick:isLocatedIn lab:DualMonitorBuilding ;
+    sosa:observes     lab:OutdoorIlluminance ;
+    ws:hasBehavioralStereotype ws:WeatherStationStereotype ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:Outside a owl:NamedIndividual ;
+    rdfs:label "Outdoor light source (sun)" ;
+    ws:hasBehavioralStereotype ws:OutsideStereotype ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:IndoorLightingStream a elem:Stream ;
+    rdfs:label "Indoor lighting process stream (shared)" ;
+    elem:hasStreamKind ws:IndoorLightingStream .
+
+lab:OutdoorSunlightStream a elem:Stream ;
+    rdfs:label "Outdoor sunlight stream" ;
+    elem:hasStreamKind ws:OutdoorSunlightStream .
+
+lab:IndoorIlluminance_Z1 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 1" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+lab:IndoorIlluminance_Z2 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 2" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+lab:OutdoorIlluminance a sosa:ObservableProperty ;
+    rdfs:label "Outdoor illuminance (sunshine)" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+
+# ===========================================================================
+# 7.  TOPOLOGICAL CONNECTIONS  (same-zone + sun only — NO cross-zone spill)
+# ===========================================================================
+
+# Sun → weather station + both blinds.
+lab:Outside          brick:feeds  lab:WeatherStation .
+lab:Outside          brick:feeds  lab:Blind_Z1 .
+lab:Outside          brick:feeds  lab:Blind_Z2 .
+
+# Same-zone illumination (each described light source feeds only its own
+# zone's sensor). The monitors' real effect on the sensors is absent from
+# this graph.
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z1 .
+lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z2 .
+lab:Blind_Z1         brick:feeds  lab:LightSensor_Z1 .
+lab:Blind_Z2         brick:feeds  lab:LightSensor_Z2 .
+
+
+# ===========================================================================
+# 8.  COMPONENT ACTIONS
+# ===========================================================================
+
+ws:SetZ1Light_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Light_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z1 elem:hasComponentAction ws:SetZ1Light_ON, ws:SetZ1Light_OFF .
+
+ws:SetZ2Light_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ2Light_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z2 elem:hasComponentAction ws:SetZ2Light_ON, ws:SetZ2Light_OFF .
+
+ws:SetZ1Monitor_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Monitor_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Monitor_Z1 elem:hasComponentAction ws:SetZ1Monitor_ON, ws:SetZ1Monitor_OFF .
+
+ws:SetZ2Monitor_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ2Monitor_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Monitor_Z2 elem:hasComponentAction ws:SetZ2Monitor_ON, ws:SetZ2Monitor_OFF .
+
+ws:SetZ1Blinds_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Blinds_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Blind_Z1 elem:hasComponentAction ws:SetZ1Blinds_ON, ws:SetZ1Blinds_OFF .
+
+ws:SetZ2Blinds_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ2Blinds_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Blind_Z2 elem:hasComponentAction ws:SetZ2Blinds_ON, ws:SetZ2Blinds_OFF .
+
+
+# ===========================================================================
+# 9.  STATE VECTOR SLOT REGISTRY  (length 9)
+#  [Z1Level,Z2Level,Z1Light,Z2Light,Z1Monitor,Z2Monitor,Z1Blinds,Z2Blinds,Sunshine]
+# ===========================================================================
+
+lab:Slot_ZoneLevel_Z1
+    ws:stateVecIndex   0 ; ws:stateDomainSize 4 ; ws:stateSlotRole "zone_level" ; ws:zoneIndex 1 .
+
+lab:Slot_ZoneLevel_Z2
+    ws:stateVecIndex   1 ; ws:stateDomainSize 4 ; ws:stateSlotRole "zone_level" ; ws:zoneIndex 2 .
+
+lab:Slot_Sunshine
+    ws:stateVecIndex   8 ; ws:stateDomainSize 4 ; ws:stateSlotRole "sunshine" .
+
+
+# ===========================================================================
+# 10.  WoT ACTION / STATE MAPPINGS  (with the component actions of section 8
+#      they define the action list of both arms; the remaining state entries)
+# ===========================================================================
+
+lab:CeilingLight_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Light" ;
+    ws:stateVecIndex            2 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:CeilingLight_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Light" ;
+    ws:stateVecIndex            3 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:Monitor_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Monitor" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Monitor" ;
+    ws:stateVecIndex            4 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:Monitor_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Monitor" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Monitor" ;
+    ws:stateVecIndex            5 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:Blind_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Blinds" ;
+    ws:stateVecIndex            6 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:Blind_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Blinds" ;
+    ws:stateVecIndex            7 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .

@@ -1,0 +1,224 @@
+analysis,check,expected,observed,abs_difference,tolerance,pass,expected_source
+test_trained_vs_unseen,lab1 trained of total,6 of 8,6 of 8,,1e-09,true,brief
+test_trained_vs_unseen,lab2 trained of total,11 of 16,11 of 16,,1e-09,true,brief
+test_trained_vs_unseen,lab3 trained of total,10 of 16,10 of 16,,1e-09,true,brief
+test_trained_vs_unseen,lab4 trained of total,10 of 16,10 of 16,,1e-09,true,brief
+test_trained_vs_unseen,lab5 trained of total,10 of 16,10 of 16,,1e-09,true,brief
+test_trained_vs_unseen,phase1_v2_kg_only lab1 ql_false ALL-subset goal_share,1,1,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab1 ql_false ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab1 ql_true ALL-subset goal_share,1,1,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab1 ql_true ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab1 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab1 rule_based ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab2 ql_false ALL-subset goal_share,0.95125,0.95125,1.11022302463e-16,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab2 ql_false ALL-subset mean_steps,2.46,2.46,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab2 ql_true ALL-subset goal_share,1,1,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab2 ql_true ALL-subset mean_steps,1.12625,1.12625,2.22044604925e-16,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab2 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab2 rule_based ALL-subset mean_steps,0.9375,0.9375,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab3 ql_false ALL-subset goal_share,0.97625,0.97625,1.11022302463e-16,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab3 ql_false ALL-subset mean_steps,1.599375,1.599375,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab3 ql_true ALL-subset goal_share,0.9625,0.9625,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab3 ql_true ALL-subset mean_steps,1.931875,1.931875,2.22044604925e-16,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab3 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_kg_only lab3 rule_based ALL-subset mean_steps,0.875,0.875,0,1e-09,true,run_29848584965\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab1 ql_false ALL-subset goal_share,1,1,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab1 ql_false ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab1 ql_true ALL-subset goal_share,1,1,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab1 ql_true ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab1 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab1 rule_based ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab2 ql_false ALL-subset goal_share,0.95125,0.95125,1.11022302463e-16,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab2 ql_false ALL-subset mean_steps,2.46,2.46,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab2 ql_true ALL-subset goal_share,0.9875,0.9875,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab2 ql_true ALL-subset mean_steps,1.640625,1.640625,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab2 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab2 rule_based ALL-subset mean_steps,0.9375,0.9375,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab3 ql_false ALL-subset goal_share,0.97625,0.97625,1.11022302463e-16,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab3 ql_false ALL-subset mean_steps,1.599375,1.599375,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab3 ql_true ALL-subset goal_share,0.996875,0.996875,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab3 ql_true ALL-subset mean_steps,1.23375,1.23375,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab3 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_redundancy_only lab3 rule_based ALL-subset mean_steps,0.875,0.875,0,1e-09,true,run_29848587274\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab1 ql_false ALL-subset goal_share,1,1,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab1 ql_false ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab1 ql_true ALL-subset goal_share,1,1,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab1 ql_true ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab1 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab1 rule_based ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab2 ql_false ALL-subset goal_share,0.95125,0.95125,1.11022302463e-16,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab2 ql_false ALL-subset mean_steps,2.46,2.46,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab2 ql_true ALL-subset goal_share,0.95125,0.95125,1.11022302463e-16,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab2 ql_true ALL-subset mean_steps,2.46,2.46,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab2 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab2 rule_based ALL-subset mean_steps,0.9375,0.9375,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab3 ql_false ALL-subset goal_share,0.97625,0.97625,1.11022302463e-16,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab3 ql_false ALL-subset mean_steps,1.599375,1.599375,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab3 ql_true ALL-subset goal_share,0.97625,0.97625,1.11022302463e-16,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab3 ql_true ALL-subset mean_steps,1.599375,1.599375,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab3 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_baseline lab3 rule_based ALL-subset mean_steps,0.875,0.875,0,1e-09,true,run_29848589682\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab1 ql_false ALL-subset goal_share,1,1,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab1 ql_false ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab1 ql_true ALL-subset goal_share,1,1,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab1 ql_true ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab1 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab1 rule_based ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab2 ql_false ALL-subset goal_share,0.943125,0.943125,1.11022302463e-16,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab2 ql_false ALL-subset mean_steps,2.614375,2.614375,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab2 ql_true ALL-subset goal_share,0.943125,0.943125,1.11022302463e-16,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab2 ql_true ALL-subset mean_steps,2.614375,2.614375,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab2 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab2 rule_based ALL-subset mean_steps,0.9375,0.9375,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab3 ql_false ALL-subset goal_share,0.97625,0.97625,1.11022302463e-16,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab3 ql_false ALL-subset mean_steps,1.599375,1.599375,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab3 ql_true ALL-subset goal_share,0.97625,0.97625,1.11022302463e-16,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab3 ql_true ALL-subset mean_steps,1.599375,1.599375,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab3 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_pbrs_only lab3 rule_based ALL-subset mean_steps,0.875,0.875,0,1e-09,true,run_29848592010\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab1 ql_false ALL-subset goal_share,1,1,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab1 ql_false ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab1 ql_true ALL-subset goal_share,1,1,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab1 ql_true ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab1 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab1 rule_based ALL-subset mean_steps,0.5,0.5,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab2 ql_false ALL-subset goal_share,0.95125,0.95125,1.11022302463e-16,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab2 ql_false ALL-subset mean_steps,2.46,2.46,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab2 ql_true ALL-subset goal_share,1,1,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab2 ql_true ALL-subset mean_steps,1.149375,1.149375,2.22044604925e-16,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab2 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab2 rule_based ALL-subset mean_steps,0.9375,0.9375,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab3 ql_false ALL-subset goal_share,0.97625,0.97625,1.11022302463e-16,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab3 ql_false ALL-subset mean_steps,1.599375,1.599375,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab3 ql_true ALL-subset goal_share,0.9475,0.9475,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab3 ql_true ALL-subset mean_steps,2.305625,2.305625,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab3 rule_based ALL-subset goal_share,1,1,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase1_v2_brick_only lab3 rule_based ALL-subset mean_steps,0.875,0.875,0,1e-09,true,run_42834963612\analysis\out\summary_table_ci.csv
+test_trained_vs_unseen,phase4_v2 lab4 ALL-subset ql_true-ql_false goal_share,0.01875,0.01875,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_brick_only lab4 ALL-subset ql_true-ql_false goal_share,0.01875,0.01875,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_redundancy_only lab4 ALL-subset ql_true-ql_false goal_share,0.013125,0.013125,3.46944695195e-18,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2 lab4 ALL-subset ql_true-ql_false mean_steps,-0.695,-0.695,1.11022302463e-16,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_brick_only lab4 ALL-subset ql_true-ql_false mean_steps,-0.654375,-0.654375,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_redundancy_only lab4 ALL-subset ql_true-ql_false mean_steps,-0.39,-0.39,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2 lab4dual ALL-subset ql_true-ql_false goal_share,0.01625,0.01625,1.38777878078e-17,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_brick_only lab4dual ALL-subset ql_true-ql_false goal_share,0.01625,0.01625,1.38777878078e-17,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_redundancy_only lab4dual ALL-subset ql_true-ql_false goal_share,0.011875,0.011875,3.46944695195e-18,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2 lab4dual ALL-subset ql_true-ql_false mean_steps,-0.745,-0.745,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_brick_only lab4dual ALL-subset ql_true-ql_false mean_steps,-0.69125,-0.69125,1.11022302463e-16,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_redundancy_only lab4dual ALL-subset ql_true-ql_false mean_steps,-0.2925,-0.2925,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2 lab4chain ALL-subset ql_true-ql_false goal_share,0.015,0.015,1.38777878078e-17,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_brick_only lab4chain ALL-subset ql_true-ql_false goal_share,0.015,0.015,1.38777878078e-17,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_redundancy_only lab4chain ALL-subset ql_true-ql_false goal_share,0.01375,0.01375,1.04083408559e-17,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2 lab4chain ALL-subset ql_true-ql_false mean_steps,-0.734375,-0.734375,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_brick_only lab4chain ALL-subset ql_true-ql_false mean_steps,-0.71875,-0.71875,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_redundancy_only lab4chain ALL-subset ql_true-ql_false mean_steps,-0.43875,-0.43875,5.55111512313e-17,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2 lab5 ALL-subset ql_true-ql_false goal_share,-0.00875,-0.00875,1.73472347598e-18,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2 lab5 ALL-subset ql_true-ql_false mean_steps,0.1775,0.1775,2.77555756156e-17,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_brick_only lab5 ALL-subset ql_true-ql_false goal_share,-0.0225,-0.0225,3.46944695195e-18,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+test_trained_vs_unseen,phase4_v2_brick_only lab5 ALL-subset ql_true-ql_false mean_steps,0.523125,0.523125,1.11022302463e-16,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+training_can_fail,lab2 terminal-at-start episodes per file,1091,1091,0,1e-09,true,project handbook (brief)
+training_can_fail,lab2 kg_only ql_true overall success share (4 dp),1.0000,1.0000,,1e-09,true,brief
+training_can_fail,lab2 kg_only ql_false overall success share (4 dp),0.9963,0.9963,,1e-09,true,brief
+training_can_fail,phase1_v2_kg_only lab1 ql_true auc_goal,1,1,0,1e-09,true,run_29848584965\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_kg_only lab1 ql_false auc_goal,1,1,0,1e-09,true,run_29848584965\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_kg_only lab2 ql_true auc_goal,1,1,0,1e-09,true,run_29848584965\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_kg_only lab2 ql_false auc_goal,0.9963,0.9963,1.11022302463e-16,1e-09,true,run_29848584965\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_kg_only lab3 ql_true auc_goal,0.994766666667,0.994766666667,3.336220189e-13,1e-09,true,run_29848584965\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_kg_only lab3 ql_false auc_goal,0.997066666667,0.997066666667,3.33288951992e-13,1e-09,true,run_29848584965\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_redundancy_only lab1 ql_true auc_goal,1,1,0,1e-09,true,run_29848587274\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_redundancy_only lab1 ql_false auc_goal,1,1,0,1e-09,true,run_29848587274\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_redundancy_only lab2 ql_true auc_goal,0.998883333333,0.998883333333,3.33288951992e-13,1e-09,true,run_29848587274\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_redundancy_only lab2 ql_false auc_goal,0.9963,0.9963,1.11022302463e-16,1e-09,true,run_29848587274\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_redundancy_only lab3 ql_true auc_goal,0.999466666667,0.999466666667,3.33510996597e-13,1e-09,true,run_29848587274\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_redundancy_only lab3 ql_false auc_goal,0.997066666667,0.997066666667,3.33288951992e-13,1e-09,true,run_29848587274\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_baseline lab1 ql_true auc_goal,1,1,0,1e-09,true,run_29848589682\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_baseline lab1 ql_false auc_goal,1,1,0,1e-09,true,run_29848589682\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_baseline lab2 ql_true auc_goal,0.9963,0.9963,1.11022302463e-16,1e-09,true,run_29848589682\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_baseline lab2 ql_false auc_goal,0.9963,0.9963,1.11022302463e-16,1e-09,true,run_29848589682\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_baseline lab3 ql_true auc_goal,0.997066666667,0.997066666667,3.33288951992e-13,1e-09,true,run_29848589682\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_baseline lab3 ql_false auc_goal,0.997066666667,0.997066666667,3.33288951992e-13,1e-09,true,run_29848589682\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_pbrs_only lab1 ql_true auc_goal,1,1,0,1e-09,true,run_29848592010\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_pbrs_only lab1 ql_false auc_goal,1,1,0,1e-09,true,run_29848592010\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_pbrs_only lab2 ql_true auc_goal,0.99605,0.99605,0,1e-09,true,run_29848592010\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_pbrs_only lab2 ql_false auc_goal,0.99605,0.99605,0,1e-09,true,run_29848592010\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_pbrs_only lab3 ql_true auc_goal,0.997066666667,0.997066666667,3.33288951992e-13,1e-09,true,run_29848592010\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_pbrs_only lab3 ql_false auc_goal,0.997066666667,0.997066666667,3.33288951992e-13,1e-09,true,run_29848592010\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_brick_only lab1 ql_true auc_goal,1,1,0,1e-09,true,run_42834963612\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_brick_only lab1 ql_false auc_goal,1,1,0,1e-09,true,run_42834963612\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_brick_only lab2 ql_true auc_goal,1,1,0,1e-09,true,run_42834963612\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_brick_only lab2 ql_false auc_goal,0.9963,0.9963,1.11022302463e-16,1e-09,true,run_42834963612\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_brick_only lab3 ql_true auc_goal,0.990916666667,0.990916666667,3.3317792969e-13,1e-09,true,run_42834963612\analysis\out\learning_speed_table.csv
+training_can_fail,phase1_v2_brick_only lab3 ql_false auc_goal,0.997066666667,0.997066666667,3.33288951992e-13,1e-09,true,run_42834963612\analysis\out\learning_speed_table.csv
+detection_correct_component,v2_corrected lab3_f1dead ql_true record mean DetectEpisode,4001,4001,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1dead ql_false record mean DetectEpisode,1804.05,1804.05,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1inv ql_true record mean DetectEpisode,0,0,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1inv ql_false record mean DetectEpisode,0.05,0.05,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1dead_z2 ql_true record mean DetectEpisode,4001,4001,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1dead_z2 ql_false record mean DetectEpisode,3.15,3.15,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1inv_z2 ql_true record mean DetectEpisode,0,0,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1inv_z2 ql_false record mean DetectEpisode,0,0,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1bdead ql_true record mean DetectEpisode,5,5,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1bdead ql_false record mean DetectEpisode,5,5,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1binv ql_true record mean DetectEpisode,5,5,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab3_f1binv ql_false record mean DetectEpisode,5,5,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab2_f1bdead ql_true record mean DetectEpisode,6,6,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab2_f1bdead ql_false record mean DetectEpisode,6,6,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab2_f1binv ql_true record mean DetectEpisode,6,6,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,v2_corrected lab2_f1binv ql_false record mean DetectEpisode,6,6,0,1e-09,true,phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv
+detection_correct_component,structonly lab2_f1bdead ql_true record mean DetectEpisode,204.1,204.1,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,structonly lab2_f1bdead ql_false record mean DetectEpisode,4.6,4.6,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,structonly lab3_f1bdead ql_true record mean DetectEpisode,4001,4001,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,structonly lab3_f1bdead ql_false record mean DetectEpisode,2202.4,2202.4,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,structonly lab3_f2dead_lowsun ql_true record mean DetectEpisode,4001,4001,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,lowsun lab3_f2dead_lowsun ql_true record mean DetectEpisode,4001,4001,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,structonly lab3_f2dead_lowsun ql_false record mean DetectEpisode,1800.45,1800.45,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,lowsun lab3_f2dead_lowsun ql_false record mean DetectEpisode,1800.45,1800.45,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,structonly labmon2_f2dead_lowsun ql_true record mean DetectEpisode,1200.3,1200.3,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,lowsun labmon2_f2dead_lowsun ql_true record mean DetectEpisode,1200.3,1200.3,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,structonly labmon2_f2dead_lowsun ql_false record mean DetectEpisode,0.35,0.35,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,lowsun labmon2_f2dead_lowsun ql_false record mean DetectEpisode,0.35,0.35,0,1e-09,true,phase2_v3_structonly/analysis/registered/phase2_structonly_v3_detection_family.csv
+detection_correct_component,structonly lab3_f1bdead ql_false seed 6 first blame,SetZ2Blinds,SetZ2Blinds,,1e-09,true,brief
+lab3_failure_anatomy,phase1_v2_kg_only ql_true failed training episodes,314,314,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_kg_only ql_false failed training episodes,176,176,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_kg_only ql_false pooled test goal share,0.97625,0.97625,1.11022302463e-16,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_kg_only ql_true pooled test goal share,0.9625,0.9625,0,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_kg_only rule_based pooled test goal share,1,1,0,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_redundancy_only ql_true failed training episodes,32,32,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_redundancy_only ql_false failed training episodes,176,176,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_redundancy_only ql_false pooled test goal share,0.97625,0.97625,1.11022302463e-16,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_redundancy_only ql_true pooled test goal share,0.996875,0.996875,0,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_redundancy_only rule_based pooled test goal share,1,1,0,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_baseline ql_true failed training episodes,176,176,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_baseline ql_false failed training episodes,176,176,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_baseline ql_false pooled test goal share,0.97625,0.97625,1.11022302463e-16,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_baseline ql_true pooled test goal share,0.97625,0.97625,1.11022302463e-16,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_baseline rule_based pooled test goal share,1,1,0,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_pbrs_only ql_true failed training episodes,176,176,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_pbrs_only ql_false failed training episodes,176,176,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_pbrs_only ql_false pooled test goal share,0.97625,0.97625,1.11022302463e-16,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_pbrs_only ql_true pooled test goal share,0.97625,0.97625,1.11022302463e-16,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_pbrs_only rule_based pooled test goal share,1,1,0,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_brick_only ql_true failed training episodes,545,545,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_brick_only ql_false failed training episodes,176,176,0,0,true,learning_speed_table.csv auc_goal x 60000
+lab3_failure_anatomy,phase1_v2_brick_only ql_false pooled test goal share,0.97625,0.97625,1.11022302463e-16,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_brick_only ql_true pooled test goal share,0.9475,0.9475,0,1e-09,true,summary_table_ci.csv
+lab3_failure_anatomy,phase1_v2_brick_only rule_based pooled test goal share,1,1,0,1e-09,true,summary_table_ci.csv
+phase4_steps_split,lab4 phase4_v2 mean paired difference of the sum (3 dp),-0.695,-0.695,,1e-09,true,brief
+phase4_steps_split,phase4_v2 lab4 sum mean_ql_true,0.8875,0.8875,0,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4 sum mean_ql_false,1.5825,1.5825,0,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4 sum mean_paired_difference,-0.695,-0.695,1.11022302463e-16,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4dual sum mean_ql_true,1.131875,1.131875,0,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4dual sum mean_ql_false,1.876875,1.876875,0,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4dual sum mean_paired_difference,-0.745,-0.745,0,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4chain sum mean_ql_true,0.934375,0.934375,0,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4chain sum mean_ql_false,1.66875,1.66875,0,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4chain sum mean_paired_difference,-0.734375,-0.734375,0,1e-09,true,phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv
+phase4_steps_split,phase4_v2 lab4 sum ql_true-ql_false,-0.695,-0.695,1.11022302463e-16,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+phase4_steps_split,phase4_v2_brick_only lab4 sum ql_true-ql_false,-0.654375,-0.654375,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+phase4_steps_split,phase4_v2_redundancy_only lab4 sum ql_true-ql_false,-0.39,-0.39,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+phase4_steps_split,phase4_v2 lab4dual sum ql_true-ql_false,-0.745,-0.745,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+phase4_steps_split,phase4_v2_brick_only lab4dual sum ql_true-ql_false,-0.69125,-0.69125,1.11022302463e-16,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+phase4_steps_split,phase4_v2_redundancy_only lab4dual sum ql_true-ql_false,-0.2925,-0.2925,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+phase4_steps_split,phase4_v2 lab4chain sum ql_true-ql_false,-0.734375,-0.734375,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+phase4_steps_split,phase4_v2_brick_only lab4chain sum ql_true-ql_false,-0.71875,-0.71875,0,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv
+phase4_steps_split,phase4_v2_redundancy_only lab4chain sum ql_true-ql_false,-0.43875,-0.43875,5.55111512313e-17,1e-09,true,phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_descriptives.csv

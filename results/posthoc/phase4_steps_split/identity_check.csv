@@ -1,0 +1,12 @@
+run_mode,lab,rows_checked,violations
+phase4_v2,lab4,4800,0
+phase4_v2,lab4dual,4800,0
+phase4_v2,lab4chain,4800,0
+phase4_v2,lab5,4800,0
+phase4_v2_brick_only,lab4,4800,0
+phase4_v2_brick_only,lab4dual,4800,0
+phase4_v2_brick_only,lab4chain,4800,0
+phase4_v2_brick_only,lab5,4800,0
+phase4_v2_redundancy_only,lab4,4800,0
+phase4_v2_redundancy_only,lab4dual,4800,0
+phase4_v2_redundancy_only,lab4chain,4800,0

@@ -1,0 +1,1134 @@
+# Pre-Registration of Hypotheses
+
+> **PHASE 1 STATUS (2026-07-22).** The Phase 1 addenda below are retained as the
+> chronological protocol-v1 record but their empirical outcomes are protocol-affected and
+> not current evidence. The binding correction registration is
+> `docs/phase1_correction_registration_2026-07-21.md`, its pre-data queue addendum is
+> `docs/phase1_correction_registration_2026-07-21a.md`, and the corrected result is
+> `docs/phase1_results_v2.md`. Registrations for other phases are unaffected.
+
+> **HISTORICAL REGISTRATION.** This document is retained unchanged as the registration
+> history for older protocols. It does not register Phase 1 protocol v2. See
+> `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+
+**Project:** Stereotype-Guided Q-Learning for Smart-Building Lighting Control
+**Date committed:** 2026-05-24
+**Status:** locked *before* the paper-mode multi-seed sweep produces any aggregated CI output.
+
+This document fixes the hypotheses, statistical tests, and decision rules **in advance** of running the
+paper sweep so that the results section of the thesis / IEEE paper distinguishes confirmatory analyses
+from exploratory ones. Any analysis not described below that ends up in the paper is to be reported
+explicitly as exploratory.
+
+Reference for the methodology: Munafò et al., "A manifesto for reproducible science," *Nature Human Behaviour*, 2017.
+
+---
+
+## 1. Design at a glance
+
+- **Independent variables**
+  - `mode ∈ {rule_based, ql_false, ql_true}`
+  - `profile ∈ {custom2 (W1), custom3 (W2), custom4 (W3), custom5 (W4), custom6 (W5), custom7 (W6), custom8 (clean)}`
+  - `seed ∈ {1, 2, 3, 4, 5}` — independent replicas
+- **Configuration under test (main run, "full system")**
+  - `reward_shaping = "pbrs"` (E2 on)
+  - `adaptive_trust = true` (E3 on)
+  - `stereo_prior_scale = 5.0`
+  - `reward_clip = 50.0`
+  - all other knobs at the `paper` defaults in `config/run_config.json`
+- **Dependent variables (metrics)**, computed per scenario then averaged per (profile, mode, seed):
+  - `goal_rate` (primary)
+  - `avg_steps` (secondary)
+  - `avg_dev` (cumulative illuminance deviation)
+  - `avg_energy`
+  - `avg_wasted`
+- **Replication**: 5 seeds for the main sweep, 3 seeds for each ablation.
+
+## 2. Statistical methods (locked)
+
+For every (profile, metric) cell we compute:
+
+1. **Mean and 95 % bootstrap confidence interval** across seeds (10 000 resamples, `numpy.random.default_rng(0xC1)` for determinism). Implemented in `analysis/sweep_report.py::aggregate_seeds`.
+2. **Paired bootstrap p-value** for `ql_true − ql_false` and `ql_true − rule_based`, two-sided, 10 000 resamples. Pairing is by seed (same training seed produces both `ql_true` and `ql_false` outcomes on the same scenario set).
+3. **Wilcoxon signed-rank** test as a non-parametric backup (`scipy.stats.wilcoxon`, two-sided).
+4. **Cliff's δ** as an effect size (negligible < 0.147, small < 0.33, medium < 0.474, else large).
+5. **Multiple-comparisons correction**: Benjamini–Hochberg q-values across the family of `(7 profiles × 5 metrics × 2 mode-pairs) = 70` tests per analysis (main, ablation A, B, C separately).
+
+Significance threshold: **q ≤ 0.05** for the corrected results; raw p-values reported alongside for transparency.
+
+## 3. Confirmatory hypotheses
+
+Each hypothesis names: (a) the population it applies to, (b) the metric, (c) the test, (d) the rejection criterion.
+
+### H1 — E1 + full system, clean lab
+
+> On `custom8`, `ql_true` mean `goal_rate` is **at least as high as** `ql_false`.
+
+- Test: paired bootstrap on `goal_rate` over 5 seeds, one-sided ( H_A: μ_diff ≥ 0 ).
+- Pre-registered prediction: 95 % CI of the paired difference is **non-negative**, i.e. lower bound ≥ 0.
+- Falsified if: CI strictly below zero (i.e. `ql_true` is significantly worse).
+- This is the headline ordering the project is built to recover.
+- **Amendment 2026-06-06 (Sweep-17 honest negative → re-specification; see §6.6).** Sweep 17
+  (GitHub Actions run `27008592029`) **falsified H1 on `custom8`** as originally framed
+  (`ql_true − ql_false` CI strictly negative; [docs/sweep17_followup_analysis.md](sweep17_followup_analysis.md) §3.2).
+  Root cause: `custom8`'s optimum is sun-invariant so the `Mediates(blind, sunshine)` prior has
+  **no positive lever** there (audit Step-1b §3), under-training (2500 episodes ≈ 2 visits/cell),
+  and the metric (terminal `goal_rate`) measures asymptote, not learning *speed* — which is the
+  actual thesis claim. **H1 is re-specified in §6.6:** headline lab → **`custom9`** (reachability
+  proven, [sweep17_followup_analysis.md](sweep17_followup_analysis.md) §9), primary metric →
+  **learning speed** (AUC of the goal-rate learning curve + episodes-to-threshold), confirmatory
+  lab set reduced to `{custom9, custom3, custom5}`. The original `custom8` / `goal_rate` result is
+  retained as a frozen, honestly-reported negative.
+
+### H2 — E2 PBRS speeds up learning
+
+> With PBRS on, the mean **episodes-to-first-goal** (per the existing `first_goal_stereotypes_*` CSV) is lower than with PBRS off, on **every profile**.
+
+- Test: paired Wilcoxon over 3 seeds × 7 profiles = 21 paired observations, one-sided ( H_A: episodes_PBRS < episodes_noPBRS ).
+- Pre-registered prediction: q ≤ 0.05.
+- Falsified if: q > 0.05 or median difference ≥ 0.
+- Uses the data from the **noPBRS ablation** vs the **main run**.
+
+### H3 — E3 adaptive trust avoids prior collapse on wrong-ontology labs
+
+> On weakness labs `{custom2, custom3, custom4, custom5}`, `ql_true` mean `goal_rate` is **not significantly worse than** `ql_false`.
+
+- Test: per-profile paired bootstrap on `goal_rate` over 5 seeds. Required: 95 % CI of `ql_true − ql_false` includes 0 **or** is strictly positive, for **every** profile in the confirmatory set `{custom2, custom3, custom4, custom5}`.
+- Pre-registered prediction: zero profiles in this set show a CI strictly below zero.
+- Falsified if: at least one profile in `{custom2, custom3, custom4, custom5}` has `ql_true` strictly below `ql_false` (CI does not include zero).
+- This is the safety claim: ontology priors do not hurt when wrong.
+- **Amendment 2026-06-03 (audit Step 5, S5-6 / S5-7):** `custom7` is **demoted to exploratory** because W6 mutates only `ZnTemp` and the QLearner reward function uses no temperature term ([src/env/tools/QLearner.java](src/env/tools/QLearner.java) `computeZoneReward`), so W6 has **zero channel into `goal_rate`** — it is a null test by construction. `custom6` is **demoted to exploratory and the expectation is parity, not recovery**, because W5 (Partition23 toggles every 5 ticks) makes the MDP non-Markov from the agent's POV — the partition state is not in the observation vector and the toggle period (5) is shorter than the bench horizon (20), so neither QL variant can learn the dynamics. BH correction is applied across the reduced confirmatory set (4 profiles, not 6).
+
+### H4 — Adaptive trust is **necessary** for H3 (Ablation B)
+
+> Without adaptive trust (`adaptive_trust = false`), `ql_true` is significantly **worse** than `ql_false` on **at least one** of `custom2..custom7`.
+
+- Test: per-profile paired bootstrap on `goal_rate`, ablation-B data (3 seeds). Look for any profile where the CI of `ql_true − ql_false` is strictly below zero (q ≤ 0.05 after BH correction across the 6 profiles).
+- Pre-registered prediction: ≥ 1 profile shows the regression.
+- Falsified if: zero profiles show the regression (in which case adaptive trust is empirically redundant, even if theoretically motivated).
+
+### H5 — Sanity: zero prior collapses ql_true onto ql_false (Ablation C)
+
+> With `stereo_prior_scale = 0.0`, `ql_true` and `ql_false` are **statistically indistinguishable** on every (profile, metric) cell.
+
+- Test: per-(profile, metric) paired bootstrap, ablation-C data (3 seeds). Required: 0 cells of 35 (7 × 5) reject the null at q ≤ 0.05.
+- Pre-registered prediction: 0 cells reject.
+- Falsified if: ≥ 1 cell rejects (which would indicate a hidden code-path divergence between `ql_true` and `ql_false`, independent of the prior).
+- This is a **code-integrity** check, not a research claim.
+
+## 4. Decisions on outcomes
+
+| Outcome of H1 | Outcome of H3 | Paper framing |
+|---|---|---|
+| Confirmed | Confirmed | "Stereotypes help when calibrated and never hurt." (positive) |
+| Confirmed | Falsified  | "Stereotypes help on the clean lab; adaptive trust is insufficient on labs X, Y." (mixed; investigate) |
+| Falsified | Confirmed | "A safe recipe for ontology priors in RL: indistinguishable from `ql_false` everywhere." (defensive) |
+| Falsified | Falsified  | "Stereotype priors as currently formalised are not net-positive on this domain." (honest negative) |
+
+All four outcomes are publishable. The choice of framing follows the actual numbers, not author preference.
+
+## 5. Exploratory analyses (acknowledged, not pre-registered)
+
+The following will be reported in the paper but **labelled exploratory**:
+
+- Cross-profile learning curves with bootstrap confidence bands (`analysis/learning_curves.py`).
+- Weakness-fire heatmap (`analysis/weakness_per_lab.py`) normalised per seed.
+- Per-zone calibration trajectories (`actionCalSum / actionCalN` over training time), if logged.
+- Any interaction effects between `stereo_prior_scale` and `adaptive_trust_floor` discovered post-hoc.
+
+## 6. Deviation policy
+
+If during analysis we discover that a pre-registered test is **technically inappropriate** (e.g. severe non-normality, ties in Wilcoxon), the deviation will be:
+
+1. Reported in a "Deviations" subsection of the paper's Results.
+2. Replaced by a clearly justified alternative test.
+3. The original pre-registered result reported alongside, so reviewers can audit.
+
+We will **not** silently swap tests to chase significance.
+
+### 6.1 Registered deviations (post-hoc, audit Step 0, 2026-06-03)
+
+The Step 0 sanity audit (replicability + H5 ablation) surfaced two source-code defects
+that would have invalidated any downstream paired-bootstrap inference. Both were fixed
+**before** the next paper sweep produces aggregated CI outputs. Recording them here per
+§6 so the thesis Results section can refer back.
+
+- **S0-3 — `QLearner.initWithStereotypes()` ignored `STEREO_PRIOR_SCALE`.**
+  File: `src/env/tools/QLearner.java`, lines ~267-283. The original initialiser unconditionally
+  injected stereotype-derived Q-values whenever `useStereotypes = true`, even when
+  `stereo.priorScale = 0.0`. This meant the H5 ablation (Ablation C, zero prior collapses
+  `ql_true` onto `ql_false`) was **structurally untestable** in all prior runs: setting
+  scale=0 had no effect on initial Q. Fix adds a three-branch dispatch:
+  `useStereotypes && scale > 0` → stereotype init; `useStereotypes && scale == 0` → zero-fill
+  (H5 ablation path); `!useStereotypes` → zero-fill. Marker comment `// S0-3 (audit Finding 6/7)`.
+  Impact on prior results: ablation-C cells in any pre-fix summary table are not interpretable;
+  H1/H3/H4 main-sweep cells are unaffected (they run at scale=5.0, in which branch behaviour
+  is unchanged).
+
+- **S0-4 — `runFullSweep` Gradle task did not forward `-Plearning.*` properties to the
+  benchmark JVM.** File: `build.gradle`, lines ~232-252. The project-level
+  `tasks.withType(JavaExec).configureEach { doFirst { ... systemProperty ... } }` block
+  forwards `_httpKeys` (which includes `learning.*`) to *registered* JavaExec tasks
+  (`taskQl`, `taskBench`). `runFullSweep`'s inner `project.javaexec { ... }` closure is **not**
+  a registered task and was not covered, so any `-Plearning.stereo_prior_scale=…`,
+  `-Pstereo.priorScale=…`, `-Preward.shaping=…`, `-Pstereo.adaptiveTrust*=…`,
+  `-Preward.clip=…` passed on the CLI silently fell on the floor at benchmark time.
+  Fix iterates `_httpKeys` inside the `runFullSweep` `javaexec` closure with the same
+  guard pattern. Marker comment `// S0-4 (audit Finding 5)`. Impact on prior results:
+  benchmark-phase metrics in any pre-fix paper sweep were computed with the JVM's compiled
+  defaults, not the requested CLI overrides. Training-phase metrics are unaffected (training
+  uses `taskQl`, which was always covered).
+
+### 6.2 Step 0 replicability gate — methodology deviation
+
+The pre-registration implicitly assumed bit-identical reproducibility for a fixed seed.
+Probe B (run same seed twice, diff metric CSVs) returned non-zero diffs because:
+(a) the Node-RED simulator (`simulator/simulator_flow_custom*.json`) calls `Math.random()`
+per tick for sunshine perturbation and per scenario reset — unseeded, JS engine-local;
+(b) JVM/CArtAgO timing jitter at tick=0.2s in paper mode can reorder agent perception
+events relative to environment ticks for boundary cases.
+
+Bit-identical Probe B is therefore physically impossible without rewriting the simulator
+RNG. Step 0 was completed under a relaxed protocol:
+
+- **Probe B was replaced by a degenerate-case dev-mode check.** Six dev-mode runs of `custom8`
+  (3 within-seed reps at seed=7, 3 between-seed runs at seeds=1,2,3) produced **bit-identical**
+  `mean(GoalReached)` for both `ql_true` and `ql_false` arms (artifacts:
+  `tmp_step0_optB/goal_rates.txt`, `tmp_step0_optB/verdict.txt`, dated 2026-06-03). This
+  establishes that the JaCaMo→Gradle→QLearner stack is deterministic in dev mode and that
+  the Node-RED non-determinism is amplitude-bounded at 50-episode/0.05s-tick scale.
+- **σ_within / σ_between gate (Option β) was not evaluated at paper scale.** The dev-mode
+  attempt collapsed to σ_within = σ_between = 0 (degenerate, gate undefined). Mining
+  sweep #13 archives for σ_between was not possible: the per-seed paper-mode benchmark
+  CSVs were overwritten by consolidation and the schema carries no `RunSeed` column. A
+  paper-mode re-run to establish σ_within (~9 h) was deferred.
+- **H5 (Ablation C) was not run prior to this commit.** The Probe A v3 script
+  (`run_step0_probeA_v3.ps1`) is committed and will produce the H5 verdict in a future
+  paper sweep with `-SigmaWithinTol` set from the paper-mode σ_within when measured.
+- **Consequence for confirmatory inference.** All paired-bootstrap CIs in the upcoming sweep
+  are reported with the caveat that paper-mode replicability is gated empirically by
+  *between-seed* variance only (the bootstrap distribution itself), not by an independent
+  σ_within measurement. Any CI whose half-width is comparable to plausible timing noise
+  (~0.02-0.05 in `goal_rate` units, estimated from dev-mode bounds) should be flagged
+  exploratory rather than confirmatory.
+
+Artifacts: see `memories/repo/audit-step-0-sanity.md` (§§1-12) for the full audit trail
+including the falsified Probe B variants, source diffs for S0-3/S0-4, and the
+script-syntax verification log.
+
+### 6.3 Registered deviations (post-hoc, audit Step 1 + 1b, 2026-06-03)
+
+The Step 1 (knowledge-graph) audit identified the Cecconi-style Mediates vs. Causes
+distinction as modelled-but-discarded by the QLearner consumer: every stereotype prior
+was applied as an unconditional Causes-shaped term, so the IV gate that the ontology
+encodes for `BlindStereotype` (sunshine ≥ rank 1) never fired at prior-application time.
+This produced a permanent positive bias on blind actions even at `Sunshine = 0`, where
+the simulator delivers no light through blinds. The fixes below restore the
+prior path to operational fidelity with the ontology contract and remove a body of
+declared-but-dead vocabulary. All fixes were applied under `gradlew build` + 25/25
+unit-test pass (commit anchor in `memories/repo/audit-step-1-knowledge-graph.md` §
+"Step 2 — implementation status").
+
+- **KG-1 — Removed unconditional `elem:increases elem:luminiscence` claim from
+  `ws:pm_daylight_ingress`.** File: `src/resources/lab-ontology.ttl` (BlindStereotype
+  mechanism block). Blinds now declare only the Mediates structure (IV =
+  `ws:outdoorIlluminance`, MV = `ws:blindApertureRatio`, DV = `elem:luminiscence`).
+  Forces the QLearner to compute the blind sign from the IV gate instead of from the
+  Causes shortcut.
+- **KG-2 — `StereotypeReasoner` implements Mediates (Option B, learning-first).**
+  File: `src/env/tools/StereotypeReasoner.java`. New `ActionInfo.ivMinRank` field
+  populated from SPARQL; `QLearner.greedyAction` suppresses the blind prior when the
+  current sunshine rank is below `ivMinRank`. Operational counterpart of KG-1.
+- **KG-3 — Declared `elem:increases` as `owl:ObjectProperty`** with comment restricting
+  it to Causes mechanisms. File: `src/resources/lab-ontology.ttl` (vocabulary-bridges
+  block). Documents the project-local extension to Ramanathan's vocabulary.
+- **KG-4 — Materialised `ws:rankBound_1/2/3` triples** on `ws:sensedIlluminance`
+  ({50, 100, 300}) and `ws:sensedOutdoorIlluminance` ({50, 200, 600}). File:
+  `src/resources/lab-ontology.ttl`. Removes the runtime-calibration drift risk in which
+  fallback bounds were seed-dependent and bench rank evaluation could silently change
+  per replica.
+- **KG-5 — Deleted dead `elem:ResponseDynamic`/`elem:hasResponseDynamic` block.** File:
+  `src/resources/lab-ontology.ttl`. The W3-delayed-response override mechanism existed
+  only in TTL with zero Java consumers; deletion replaced with an audit-trail comment
+  so future W3 work re-introduces both layers together.
+- **KG-7 — Added `lab:Spotlight brick:feeds {Z1,Z2} sensors`** and analogous arcs for
+  `lab:SpotlightCD` → {Z3, Z4}. File: `src/resources/lab-ontology-custom2.ttl`. Lets the
+  bench-side `CROSS_ZONE_FEEDS_QUERY` enumerate shared luminaires symmetrically; aids
+  W5 topology audits.
+- **KG-8 — Removed duplicate `ws:zoneIndex` declaration** from `wot-mappings.ttl` (the
+  canonical declaration lives in `lab-ontology.ttl`).
+- **KG-9 — Materialised `ws:pm_daylight_ingress ws:ivMinRank 1`** triple. File:
+  `src/resources/lab-ontology.ttl`. Makes the IV gate a reviewable design constant
+  rather than a Java-side magic number; supports KG-2.
+
+**Deferred (not yet applied):**
+
+- **KG-6 — `RadiatorStereotype`/`TemperatureSensorStereotype` deletion** is reversible
+  but destructive of declared-but-inert vocabulary. Held for explicit confirmation; no
+  runtime impact (DV illuminance filter already excludes these from action discovery).
+
+**Impact on prior results.** Any benchmark output produced **before** 2026-06-03 used
+the unconditional Causes prior for blinds. The H1 inversion observed in pre-fix
+`benchmark_results_ql_true.csv` on `custom8` (`ql_true − ql_false = −0.073`, q = 0.000)
+was computed under that defect. Re-runs from this commit onward are the canonical
+reference for H1/H3 confirmatory inference; pre-fix CIs are reported in the paper as
+"pre-prior-fix baseline, exploratory" alongside the post-fix confirmatory cells.
+
+### 6.4 Registered deviations (post-hoc, audit Step 1b, 2026-06-03)
+
+The Step 1b reachability audit ([audit-step-1b-bench-reachability.md](../memories/repo/audit-step-1b-bench-reachability.md))
+proved 100 % of the 28 held-out scenarios in `benchmark/scenarios_custom8.json` are
+reachable in ≤ 8 actuator toggles under `exec_max_steps(20)` via a single sun-invariant
+target vector. The positive-control lab `custom9` skeletoned in §8 of that memo was
+therefore **not built**; the ≥80 % reachability gate it would unlock is already
+satisfied.
+
+- **B-1 — Removed dead `Z[1-4]Level` initial values from
+  `benchmark/scenarios_custom8.json`.** Simulator `compute_levels`
+  (`simulator/simulator_flow_custom8.json` L171) recomputes per-zone illuminance from
+  scratch every 200 ms tick from actuator booleans + Sunshine; preset levels never
+  reached the agent. Added `_doc` array as first list element documenting Sunshine
+  pinning (`SunshinePinned = true` via L252 of the flow), the field removal, and the
+  universal target vector. `LabEnvironment.extractScenarioKV` ignores non-primitive
+  JSON values, so `_doc` is read as documentation only.
+- **B-2 (informational) — `exec_max_steps(20)` retained.** Step 1b §6 S1b-3 proposed an
+  optional one-off raise to 30 as a diagnostic; not applied because permanently
+  changing the budget would invalidate cross-comparison with all prior
+  `benchmark_results_*.csv`. Any future diagnostic re-sweep at budget 30 must be
+  flagged exploratory and reported alongside the budget-20 reference cells.
+
+**Impact on prior results.** None. The cleanup removes dead inputs and adds in-file
+documentation; the schema accepted by `setScenarioLabState` is unchanged for every
+field consumed at runtime.
+
+---
+
+### 6.5 Registered deviations (post-hoc, audit Step 6, statistics layer)
+
+Audit Step 6 reviewed `analysis/sweep_report.py`, `analysis/learning_curves.py`,
+and `analysis/midterm_results.py`. Two stat-layer choices were not explicit in §2/§3
+of this document and are recorded here so the paper can cite them as registered.
+
+- **D6-1 — Paired-bootstrap pairing is by training seed only (pre-S0-4 sweeps).**
+  `_collect_per_seed_values` (sweep_report.py) pairs cells by the seed in the
+  `results_seed<N>/` directory name, which is the *training* seed. In sweeps that
+  predate the S0-4 fix to `runFullSweep`, the bench JVM ran with a fixed
+  `RUN_SEED=0`, so the resulting paired differences capture *training-seed Q-table
+  variance only*, not bench-side stochasticity. Sweeps run after the S0-4 fix
+  propagate the training seed to the bench JVM and so capture both components.
+  The paper must report which sweep version produced the headline numbers and, if
+  using pre-S0-4 data, characterise the missing variance with at least one
+  post-S0-4 comparison sweep. Files affected: `analysis/sweep_report.py`
+  (`paired_tests`, `_paired_bootstrap_diff`), `analysis/out/paired_tests.csv`
+  column `seeds_paired`.
+
+- **D6-2 — Two-sided bootstrap p-value uses anchored-on-sign convention.**
+  `_paired_bootstrap_diff` returns
+  `p_bootstrap = 2 · P(boots ≤ 0)` when `mean_diff ≥ 0`, else
+  `2 · P(boots ≥ 0)`, rather than `2 · min(P(boots ≤ 0), P(boots ≥ 0))`. The two
+  agree when the observed mean has the same sign as the bootstrap median, which
+  is the regime for every confirmatory pre-reg cell, but can disagree near zero.
+  To make pre-reg §3 H1/H2 one-sided tests directly available without re-resampling,
+  `paired_tests.csv` now also carries `p_bootstrap_one_sided_positive`
+  (= `P(boots ≤ 0)`, evidence against H_A: μ_diff > 0) and
+  `p_bootstrap_one_sided_negative` (= `P(boots ≥ 0)`). H1 (PBRS-on reduces
+  episodes-to-first-goal) is read from `p_bootstrap_one_sided_negative`; the
+  paper should cite the one-sided column for H1/H2 and the two-sided column for
+  H3/H4/H5.
+
+- **D6-3 — BH families are bucketed by `family` column, not globally.**
+  `paired_tests.csv` now carries a `family` column with two values:
+  `confirmatory` (`ql_true` vs `ql_false`, `ql_true` vs `rule_based`) and
+  `exploratory` (`ql_false` vs `rule_based`). `_bh_qvalues` is applied
+  **independently** to each family. The confirmatory denominator is therefore
+  `m = 7 profiles × 5 metrics × 2 mode-pairs = 70` exactly as committed in §2
+  step 5, and the exploratory `ql_false vs rule_based` comparison cannot inflate
+  m for the confirmatory tests. The `bh_family_m` column records the denominator
+  actually used per row.
+
+- **D6-4 — H2 (episodes-to-first-goal, PBRS on vs off) aggregator added.**
+  `analysis/sweep_report.py::aggregate_first_goal()` reads the existing
+  `first_goal_stereotypes_<bool>_<profile>.csv` artefacts and joins by
+  (profile, seed) across the main sweep root (PBRS on) and a sibling root
+  supplied via `--first-goal-root` (PBRS off). It emits `first_goal_table.csv`
+  (per-profile, per-condition mean + bootstrap CI) and `first_goal_wilcoxon.csv`
+  (per-profile paired Wilcoxon, BH across 7 profiles). H2 was uncomputable from
+  `analysis/out/` before this change. The PBRS-off ablation sweep producing the
+  `--first-goal-root` input is registered as **Ablation A**; the orchestration
+  script is not yet committed and must be added before the H2 verdict is cited.
+
+- **D6-5 — Output routing isolates stat families per ablation.**
+  `--family-tag <name>` routes every artefact to `analysis/out/<name>/`.
+  Reserved tags: `main` (headline sweep), `ablation_a` (PBRS off, H2),
+  `ablation_b` (no stereotypes, H4), `ablation_c` (random Q-init, H5).
+  Mixing ablations under the same `analysis/out/` root is now an explicit error
+  of the operator, not a silent overwrite.
+
+- **D6-6 — `analysis/midterm_results.py` is slide-only.** Outputs are routed to
+  `analysis/out/slides/`. The script reads single-seed CSVs from the project
+  root (legacy layout) and is retained for slide regeneration only. Thesis
+  figures come from `learning_curves.py` (multi-seed) and `sweep_report.py
+  --seeds-mode` (paired tests with BH q-values).
+
+**Impact on prior results.** None for `summary_table_ci.csv` cell means or CIs.
+`paired_tests.csv` gains new columns (`family`, `seeds_paired`,
+`p_bootstrap_one_sided_positive`, `p_bootstrap_one_sided_negative`,
+`q_bootstrap_bh`, `bh_family_m`) and the BH q-value column is now per-family;
+any previously cited `q_bootstrap_bh` value computed across the union of
+confirmatory + exploratory pairs must be recomputed.
+
+---
+
+### 6.6 Registered deviations (post-hoc, Sweep-17 honest negative → re-specification, 2026-06-06)
+
+Sweep 17 (GitHub Actions run `27008592029`, 5 seeds, full benchmark) **falsified H1 and H3
+on terminal `goal_rate`** ([docs/sweep17_followup_analysis.md](sweep17_followup_analysis.md) §3).
+That negative is **kept and reported honestly**; the deviations below re-specify the
+confirmatory design so the *actual* thesis claim — that ontology priors make the agent learn
+**faster / more sample-efficiently**, not necessarily reach a higher asymptote — is the thing
+that gets tested. All changes were applied with `gradlew compileJava` + `gradlew test` green
+and a full dev-mode smoke (train both arms + benchmark all 3 modes on `custom9`, BUILD
+SUCCESSFUL). Implementation log: `/memories/session/plan.md`.
+
+- **SW17-1 — Primary metric changed from terminal `goal_rate` to learning speed.**
+  The confirmatory primary metric is now **learning speed**, operationalised as
+  (a) **AUC** of the per-episode goal-rate (and reward) learning curve — normalised mean
+  curve height, higher = better — and (b) **episodes-to-threshold** (first episode at which
+  a rolling-window goal rate crosses a threshold; right-censored; lower = better).
+  Implemented in `analysis/sweep_report.py::learning_speed_tests()` → `learning_speed_table.csv`
+  (per-condition mean + bootstrap CI) and `learning_speed_tests.csv` (paired `ql_true − ql_false`,
+  direction-aware one-sided favorable p, BH q). CLI: `--speed-window` (default 100),
+  `--speed-threshold` (default 0.5). Terminal `goal_rate` is retained as a **secondary** metric.
+  *Rationale:* the falsified H1 measured asymptote; the thesis claims efficiency. A prior that
+  bends the early learning curve upward but converges to the same asymptote is a *confirmation*
+  of the thesis and a *miss* under the old metric.
+
+- **SW17-2 — Headline lab changed `custom8` → `custom9`; confirmatory lab set reduced to
+  `{custom9, custom3, custom5}`.** `custom8`'s optimum is sun-invariant, so the
+  `Mediates(blind, sunshine)` prior has no positive lever there (audit Step-1b §3) — it cannot
+  test H1 even in principle. `custom9` gives the prior a genuine constructive lever
+  (blinds-open is part of a strictly cheaper optimum at high sun) and its target is **reachable
+  at every sunshine rank** (proof: [sweep17_followup_analysis.md](sweep17_followup_analysis.md) §9).
+  The lab set is deliberately **reduced** (train more episodes on fewer, more-informative labs
+  rather than under-train on many): `custom9` (headline, constructive prior), `custom3`,
+  `custom5` (parity controls — the two labs that were parity, not harm, in Sweep 17).
+  `custom2`/`custom4`/`custom6`/`custom7`/`custom8` move to **exploratory**.
+
+- **SW17-3 — Training budget raised `2500 → 10000` episodes (provisional).** At 2500 episodes
+  the tabular learner averaged ≈ 2 visits/state-cell — far below convergence, confounding any
+  "priors don't help" reading with "nobody converged." `config/run_config.json` `paper.num_episodes
+  = 10000`. The exact budget is provisional pending an episode-calibration probe (deferred,
+  flagged exploratory until run).
+
+- **SW17-4 — `reward_clip` raised `50 → 200`.** With the goal bonus and PBRS potential, a clip
+  at 50 saturated the useful reward range and flattened the learning signal the priors are
+  meant to sharpen. `config/run_config.json` `learning.reward_clip = 200`.
+
+- **SW17-5 — VDN joint Bellman target (per-zone bootstrap).** `QLearner.calculateQ` now
+  bootstraps each zone's Q toward `qTables[z][sNext][a*]` where `a* = jointArgmaxAction(sNext)`
+  (argmax of the summed combined-Q), instead of a per-zone independent max. This is a value-
+  decomposition (VDN) joint target consistent with the decomposed-reward design (audit Step-3a R-1)
+  and removes a per-zone over-estimation bias that added noise to the early curve.
+  File: `src/env/tools/QLearner.java`.
+
+- **SW17-6 — Constructive optimistic initialisation for the blind prior (Rule 5).**
+  `StereotypeReasoner.getInitPenaltyForZone` previously emitted **only penalties** (it could
+  discourage wrong actions but never *encourage* the right one). New Rule 5 emits a **positive
+  optimistic init** for `(blinds-open, zone-below-target, IV-satisfied)`:
+  `INIT_BONUS_MAG · gap · INIT_PENALTY_SCALE` with `INIT_BONUS_MAG = stereo.initBonus` (default
+  15.0, in `config/run_config.json` as `stereo_init_bonus`). This gives the `custom9` prior a
+  constructive lever to bend the early curve, which is exactly what the learning-speed metric
+  measures. Files: `src/env/tools/StereotypeReasoner.java`, `config/run_config.json`,
+  `run_full_project.ps1` (forwards `-Pstereo.initBonus`), `build.gradle` (`_httpKeys`).
+
+- **SW17-7 — Latent property-forwarding bug fixed in `build.gradle`.** `stereo.priorRedundant`
+  and `stereo.priorIVUnsat` were appended as `-P` flags by `run_full_project.ps1` but were
+  **absent from `_httpKeys`**, so they never reached the JVM (silently used compiled defaults).
+  Added `'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus'` to `_httpKeys`.
+  Any pre-2026-06-06 sweep that intended to vary those two knobs did not actually do so.
+
+- **SW17-8 — `first_goal` aggregator read the wrong directory (H2 unblock prerequisite).**
+  `sweep_report.py::_collect_first_goal_by_cell` read `ql_<stereo>/`, but the
+  `first_goal_stereotypes_*` CSV lives under `training_stereo_<stereo>/`. Fixed to read the
+  training dir first (fallback to `ql_`). This is why `first_goal_table.csv` came back empty in
+  Sweep 17; with the fix it populates from real `custom9` data. (H2 still additionally requires
+  the PBRS-off Ablation-A arm per D6-4.)
+
+**Impact on prior results.** The Sweep-17 `goal_rate` numbers stand as a reported negative.
+All confirmatory inference from 2026-06-06 onward uses the learning-speed primary metric on the
+reduced `{custom9, custom3, custom5}` set; the new sweep must be run after these code/config
+changes. The decision table in §4 still applies, now keyed on the learning-speed outcome rather
+than terminal `goal_rate`.
+
+### 6.7 Sweep-18 realised verdicts + learning-speed metric amendment (2026-06-XX)
+
+Sweep-18 (CI run `27073252484`, fixes commit `7a3d64c`, timing commit `9b2bc9b`; n=5 seeds,
+`{custom9, custom3, custom5}`, 10000 episodes, paper profile) is the first sweep run after all
+SW17 code/config changes. Full analysis: `docs/sweep18_results_analysis.md`. Registered outcomes:
+
+- **SW18-1 — `episodes_to_threshold` is right-censored at the horizon for every arm; AUC is
+  hereby the single pre-declared PRIMARY learning-speed statistic.** At the registered absolute
+  threshold (`--speed-threshold 0.5`, trailing window 100) the training goal-rate never reaches
+  0.5 in any cell (it plateaus ≈0.15–0.21), so `episodes_to_threshold` censors at 10000 for both
+  arms and its paired `mean_diff` is a degenerate 0.0 — which must **not** be read as a null/tie.
+  The threshold is deliberately **not** retuned to the observed plateau (that would be HARKing).
+  Instead: (a) `analysis/sweep_report.py` now emits a `metric_tier` column (`auc_goal`=`primary`,
+  `auc_reward`/`mean_first_goal`=`secondary`, `episodes_to_threshold`=`secondary_censored`) and a
+  `censored_frac` column on `learning_speed_tests.csv`; (b) `auc_goal` (normalised mean goal-rate
+  over the curve) carries the confirmatory directional claim; (c) `episodes_to_threshold` is
+  reported only with its censoring fraction. This is a reporting/clarity amendment, not a change
+  of hypothesis.
+
+- **SW18-2 — H1 (stereotype prior improves benchmark goal-rate), paired `ql_true − ql_false`,
+  BH-corrected (m=30):** `custom3` Δ +0.199 (q=0.0016, δ=0.76) ✓; `custom5` Δ +0.074 (q<0.001,
+  δ=1.0) ✓; **`custom9` Δ +0.007 (q=0.81) — null** (headline lab). Stereotypes help on the two
+  smaller labs but not on the registered headline lab `custom9`.
+
+- **SW18-3 — Learning speed `auc_goal` (`true − false`), BH (m=12):** `custom3` +0.066 (q=0.041,
+  favourable); `custom5` +0.051 (q<0.001, favourable); **`custom9` −0.042 (δ=−0.6, unfavourable).**
+  The primary speed metric mirrors H1: faster early learning under the prior on custom3/custom5,
+  *slower* on custom9.
+
+- **SW18-4 — Energy efficiency (`true − false`) favours `ql_true` on all three labs** (δ=−1.0,
+  q<0.001, −34…−84 units). This is the most robust and consistent stereotype benefit.
+
+- **SW18-5 — `mean_first_goal` is *higher* (slower to first goal) under the prior on every lab**
+  (custom3 +688 q≈0; custom9 +226 q=0.032). Attributed to the optimistic-init exploration cost of
+  Rule-5 constructive initialisation (SW17-6): the agent explores more before its first success.
+
+- **SW18-6 — custom9 base learner does not converge (under-training hypothesis refuted).**
+  Per-2000-episode goal counts are flat across all five windows (`stereo_false` ≈21%,
+  `stereo_true` ≈15%), so the SW17-3 "raise budget to 10000" lever did not unlock convergence.
+  The `custom9` null is therefore confounded between *"the prior does not help"* and *"the task is
+  not solvable in 20 steps by the tabular learner"*. Two **exploratory** follow-ups are registered
+  (not confirmatory; results will be labelled exploratory):
+  - **SW18-A — Horizon ablation on `custom9`** at `max_steps_per_episode ∈ {40, 60}` via new
+    `paper_h40`/`paper_h60` profiles (`config/run_config.json`; `num_episodes` scaled to 5000/3300
+    so each cell stays within the 6h CI cap). Resolves the convergence confound.
+  - **SW18-B — n=10 confirmatory replication** of the n=5 contrasts above (seeds 6–10 added) to
+    tighten CIs on the custom9 null and the custom3/custom5 positives. Same profiles/metrics; no
+    new hypotheses.
+
+**Impact on prior results.** SW18-2..5 are the registered confirmatory readout of the re-specified
+H1/learning-speed design (§6.6). The thesis claim "stereotype-informed Q-learning learns faster
+and more efficiently" holds on `custom3`/`custom5` (speed + energy) and on energy universally, but
+is **not** supported for learning speed/goal-rate on the registered headline lab `custom9`; the
+SW18-A horizon ablation is required before the custom9 null can be attributed to the prior rather
+than to learner capacity.
+
+---
+
+## 7. Addendum — Phase 1 Clean-Lab Design (added 2026-06-19, post-pivot)
+
+### 7.1 Context and pivot date
+
+After Sweep-18 returned a null on `custom9` (registered §6.7), the project pivoted
+(thesis meeting 2026-06-08) to a **clean physics-first lab design** on three purpose-built
+labs (`lab1`, `lab2`, `lab3`) with no ontology-weakness injection and no PBRS. The
+pivot rationale: test the baseline thesis claim (knowledge primes converge faster in a
+clean world) before introducing adversarial complications. This addendum documents that
+design so all confirmatory claims in the Phase 1 analysis documents
+(`docs/phase1_xzone_bumped_analysis.md`, `docs/phase1_xzone_replication_s11_20_analysis.md`,
+`docs/phase1_xzone_ablation_analysis.md`) have a traceable pre-registration equivalent.
+
+**Transparency note:** This addendum was written **after** data collection and should be
+reported as *confirmatory-with-post-hoc-registration* per Munafò et al. 2017. The clean-lab
+hypotheses were formed before data analysis began (the lab design and metric families were
+fixed at the time of the CI run) but were not committed to this file before the first CI
+result was seen. Readers / reviewers should treat §7.3 as pre-analysis intent rather than
+strictly pre-data.
+
+### 7.2 Design at a glance
+
+- **Independent variable (treatment):** `mode ∈ {rule_based, ql_false, ql_true}`
+  - `ql_true` = Q-learner with KG-derived stereotype priors (cross-zone bonus enabled)
+  - `ql_false` = tabula-rasa Q-learner (no priors)
+  - `rule_based` = hand-coded rule policy (oracle ceiling reference)
+- **Independent variable (lab):** `profile ∈ {lab1, lab2, lab3}`
+  - `lab1` — trivial one-zone room (expected null; positive control)
+  - `lab2` — two-zone room, no cross-zone coupling (primary discriminating lab)
+  - `lab3` — two-zone room, cross-zone light spill present (bump to rank-moving magnitude)
+- **Replications:** `seed ∈ {1, …, 10}` (10 independent paired training seeds)
+- **Configuration under test (run profile `phase1_kg_xzone`):**
+  - `reward_shaping = "none"` (no PBRS — knowledge priors only)
+  - `adaptive_trust = false`
+  - `cross_zone_bonus = 3.0` (`stereo.crossZoneBonus`)
+  - `cross_zone_bonus_mode = "targeted"` (`stereo.crossZoneBonusMode`)
+  - `stereo_init_bonus = 15.0`
+  - `num_episodes = 10000`, `exec_max_steps = 20`
+
+### 7.3 Confirmatory hypotheses
+
+**H-CL1 (medium lab, primary):** On `lab2`, `ql_true` achieves a higher AUC-goal
+(area under the per-episode goal-rate curve) than `ql_false`, paired by seed.
+
+- Test: within-seed paired bootstrap (10,000 resamples) on `auc_goal`, two-sided. BH family
+  m = 42 (all benchmark paired tests, confirmatory mode-pairs).
+- Prediction: CI of `ql_true − ql_false` is strictly positive, q ≤ 0.05.
+- Falsified if: CI includes 0 or is strictly negative.
+
+**H-CL2 (null control):** On `lab1`, no metric shows a significant difference between
+`ql_true` and `ql_false`.
+
+- Test: same paired bootstrap + BH, all metrics. Prediction: zero cells reject at q ≤ 0.05.
+- Falsified if: any cell rejects (which would indicate a code-path bug or runaway prior).
+
+**H-CL3 (efficiency, medium lab):** On `lab2`, `ql_true` produces fewer `avg_redundant`
+actions than `ql_false`.
+
+- Test: paired bootstrap on `avg_redundant`, two-sided, BH family m = 42.
+- Prediction: CI strictly negative, q ≤ 0.05.
+
+**H-CL4 (cross-zone mechanism, hard lab):** On `lab3`, `ql_true` shows a higher
+`auc_reward` than `ql_false`.
+
+- Test: paired bootstrap on `auc_reward`, two-sided, BH family m = 42.
+- Prediction: CI strictly positive, q ≤ 0.05.
+- Rationale: `auc_goal` may ceiling (both arms reach near-100% goal-rate); `auc_reward`
+  captures economy (steps, energy, deviation) and is expected to show KG advantage even
+  when the goal-rate curves converge.
+
+### 7.4 Statistical families (BH correction)
+
+| Family | Description | m (denominator) | File |
+|---|---|---|---|
+| `confirmatory` | All `(lab, metric, mode_pair)` benchmark paired tests, `ql_true` vs `ql_false` + `ql_true` vs `rule_based` | 42 | `analysis/out/paired_tests.csv` |
+| `exploratory` | `ql_false` vs `rule_based` comparisons | 21 | same file, `family=exploratory` |
+| `learning_speed` | All `(lab, metric)` pairs in learning-speed table, `ql_true − ql_false` | 12 | `analysis/out/learning_speed_tests.csv` |
+
+BH correction is applied **independently** per family; families are not pooled.
+
+### 7.5 Primary metrics
+
+- `auc_goal` (normalised mean goal-rate over the training curve) — primary learning-speed
+  metric; higher is better.
+- `auc_reward` — secondary learning-speed metric; higher is better; the sensitive metric for
+  `lab3` due to goal-rate ceiling.
+- `mean_first_goal` — secondary; episodes to first successful goal; lower is better; reported
+  with its BH q-value but not the headline claim.
+- Benchmark metrics: `goal_rate`, `avg_steps`, `avg_redundant`, `avg_wasted`, `avg_dev`,
+  `avg_energy`, `avg_cycling` — all seven reported in `paired_tests.csv`.
+
+### 7.6 Registered deviations from the original pre-registration
+
+- The original design (§1–§6) used `profile ∈ {custom2…custom8}`, PBRS on, adaptive
+  trust on, and `goal_rate` (terminal) as the primary metric. All of those choices are
+  superseded for Phase 1 by this addendum.
+- The learning-speed primary metric (`auc_goal`) was introduced in §6.6 (SW17-1) and
+  carries over unchanged.
+- The `episodes_to_threshold` metric is retained in `learning_speed_tests.csv` but
+  classified `secondary_censored` (SW18-1); it is not a headline claim for Phase 1.
+- Exploratory analysis of the **mechanism ablation** (`cross_zone_bonus_mode = "untargeted"`,
+  run `27464846574`) is reported in `docs/phase1_xzone_ablation_analysis.md` and is
+  labelled exploratory throughout; it was not pre-registered as a confirmatory test.
+
+---
+
+---
+
+## 8. Addendum — Phase 3 Process-Dynamics Design (added post-implementation, pre-analysis of confirmatory run)
+
+### 8.1 Context and registration timing
+
+After Phase 1 (KG-acceleration on clean labs) established that ontology priors can bootstrap a Q-learner, Phase 3 extends the system with **online learning of actuator response dynamics**: the agent probes each actuator, measures its empirical response time (ticks-to-settled), writes the result into the KG as `learned:learned_delay_sec`, and subsequently uses that knowledge to honour time-bounded goals (e.g. "make the room bright within 45 s").
+
+**Transparency note:** The Phase 3 code (`DynamicsLearner`, `illuminance_controller_agent_dynamics.asl`, slow-lab environments) was designed and committed before the CI run. The hypotheses, statistical protocol, and expected outcomes in §§8.3–8.4 were written into `docs/PHASE2_TO_PHASE3_CHANGES.md` §19.2 **before** the confirmatory run (`27621106006`) was dispatched, and committed in `eda6ca1` (branch `phase3-process-dynamics`). This addendum is therefore *pre-analysis* relative to the confirmatory n = 10 data; it should be cited as such. The n = 5 exploratory run (`27598417789`) was seen before §19.2 was written — it informed the design but the outcomes are reported separately (§16 of `PHASE2_TO_PHASE3_CHANGES.md`) and labelled exploratory.
+
+### 8.2 Design at a glance
+
+- **Agent:** `illuminance_controller_agent_dynamics.asl` (BDI Jason agent).
+  - **Phase A — probe:** plans 8 probe episodes per actuator; `DynamicsLearner.recordDelaySample` accumulates Welford online statistics; final mean written to KG via `saveLearnedDynamics` / `saveDelayTable`.
+  - **Phase B — exploit:** runs time-bounded goals (tight ≤ 45 s, loose ≤ 120 s) consulting `learned:learned_delay_sec` triples; action selector chooses `lamp` for tight deadlines and `blind` otherwise.
+- **Labs:** `lab2_slow` (port 1895, two-zone, `seconds_per_tick = 5.0`) and `lab3_slow` (port 1896, cross-zone spill). Blind countdown: 12 ticks = 60 s simulated. Lamp: ≤ 2 ticks ≈ 10 s (instantaneous class).
+- **Comparative arms:** `ql_true` (reads `learned_delay_sec` from KG) vs `ql_false` (ignores KG; treats all actuators as instantaneous; chooses blind by default).
+- **Replications:** `n = 10` replicas (CI dispatch input `"1,2,3,4,5,6,7,8,9,10"`). Each replica is one full probe + exploit session. The planner is deterministic given the learned table, so replicas resample tick-quantisation jitter, not a random-seed policy.
+- **Metrics:**
+  - **Delay accuracy:** `learned_delay_sec` vs ground truth 60 s (12 ticks); relative error; classification accuracy (instant vs delayed).
+  - **overall_compliance:** fraction of all goals met within their deadline.
+  - **tight_compliance:** fraction of tight-deadline goals met.
+  - **loose_compliance:** fraction of loose-deadline goals met.
+  - **total_energy:** lamp-use energy cost (lamps cost +1 per tick; blinds cost 0).
+- **Analysis script:** `analysis/phase3_dynamics.py`; paired bootstrap (10 000 resamples, RNG seed 0xC1), Wilcoxon signed-rank, Cliff's δ, BH-FDR over the 2-metric compliance family (m = 4: overall + tight × 2 labs, excluding the degenerate loose tie).
+
+### 8.3 Pre-registered hypotheses
+
+**H-P3a (delay-learning accuracy):** The agent learns the blind delay to within 5 % relative error after 8 probe episodes, and correctly classifies all actuators as instant vs delayed (threshold 30 s = 6 ticks).
+
+- Prediction: `rel_err ≤ 0.05` for every delayed actuator across both labs; classification accuracy = 100 %.
+- Falsified if: any delayed actuator has rel_err > 0.05, or any actuator is misclassified.
+
+**H-P3b (deadline compliance, primary):** `ql_true` achieves strictly higher `overall_compliance` and `tight_compliance` than `ql_false`, paired by replica.
+
+- Test: within-replica paired bootstrap (10 000 resamples) + Wilcoxon signed-rank + Cliff's δ; BH-FDR family m = 4.
+- Prediction (pre-registered in `docs/PHASE2_TO_PHASE3_CHANGES.md` §19.2, committed before run `27621106006`):
+  - `overall_compliance` diff = +0.5, CI = [0.5, 0.5], p_boot = 0.000, p_wilcoxon ≤ 0.002 (n = 10 floor = 2/2¹⁰ = 0.001953), Cliff's δ = 1.0.
+  - `tight_compliance` diff = +1.0, CI = [1.0, 1.0], identical statistics.
+  - `loose_compliance`: tie (both arms = 1.0, loose threshold easily met by both actuators).
+- Falsified if: mean diff ≤ 0 on either compliance metric, or CI includes 0.
+
+### 8.4 Statistical protocol (Phase 3)
+
+| Component | Value |
+|---|---|
+| Bootstrap resamples | 10 000 |
+| RNG seed | 0xC1 |
+| Wilcoxon (two-sided) | yes |
+| n (replicas) | 10 |
+| Wilcoxon floor at n = 10 | 2 / 2¹⁰ = 0.001953 |
+| BH family m | 4 (overall + tight × 2 labs) |
+| Significance threshold | q ≤ 0.05 |
+| Effect size | Cliff's δ (non-parametric) |
+| CI level | 95 % (two-sided, percentile) |
+
+### 8.5 Registered deviations / design notes
+
+- **D-P3-1 — n raised 5 → 10 (Wilcoxon floor).** The first exploratory sweep used `n = 5`; the two-sided signed-rank floor at n = 5 is `2/2⁵ = 0.0625 > 0.05`, so the Wilcoxon column cannot clear 0.05 regardless of effect size. The workflow default was bumped to `1..10` (commit `eda6ca1`), and the confirmatory run uses n = 10. Bootstrap and Cliff's δ were the load-bearing significance statistics for the n = 5 exploratory run; the n = 10 run satisfies all three tests.
+- **D-P3-2 — Planner is deterministic (CIs are degenerate by design).** The exploit planner always chooses lamp for tight goals (learned_delay_blind = 60 s > 45 s threshold) and blind for loose goals. Given the learned table, the per-replica outcome is deterministic: exactly 6/6 goals met by `ql_true`, exactly 3/6 by `ql_false`. The `[1.0, 1.0]` / `[0.0, 0.0]` compliance CIs reflect this determinism, not under-powered sampling. Genuine stochasticity (tick-quantisation jitter) appears only in the delay accuracy CIs.
+- **D-P3-3 — Cross-zone exploitation in lab3_slow (observed, not pre-registered).** The `ql_true` arm in `lab3_slow` satisfies a cross-zone goal by actuating `Z1Blinds` rather than `Z2Blinds`, because the probe phase measured a valid cross-zone effect (`action_effect/3`) during probing. This is an emergent and benign result — the agent discovered the cross-zone coupling from data rather than from a hand-asserted prior. Reported as an observation in `docs/PHASE2_TO_PHASE3_CHANGES.md` §17 Q3; not a confirmatory claim.
+- **D-P3-4 — Energy metric direction.** Higher `total_energy` in `ql_true` is expected and correct: choosing a lamp (instantaneous, costs +1/tick) instead of a blind (delayed, costs 0) is the right trade-off for tight deadlines. The energy cost is a transparency metric, not an efficiency regression.
+
+---
+
+## 9. Addendum — Phase 2 Fault-Detection & Recovery (added 2026-07-08, pre-pooled-re-analysis)
+
+### 9.1 Context and registration timing
+
+Phase 2 (recognize → discard → alert → re-learn) produced results across seven CI iterations
+(runs 27470382799 → 28884717500) during which the recovery instrument, the well-posed cell
+set, and the BH correction family were revised between runs (audit:
+`docs/_audit/12_stats_review.md` §3.1–§3.4). This addendum freezes the hypothesis, every
+metric definition, the tier rules, the analysis set, and exactly one BH-FDR family per
+metric, **before** the single pooled re-analysis over the frozen analysis set is executed.
+
+**Transparency note (per Munafò et al. 2017, same status as §7.1):** this addendum is
+written *after* the per-run results were seen but *before* the pooled seed-paired
+re-analysis is run. Every Phase-2 significance statement in the thesis must cite the pooled
+re-analysis under this §9, and must be labelled **confirmatory-with-post-hoc-registration**.
+The per-run tables published earlier (v5/v6/ext/backfill/labmon/lowsun `analysis/out/`
+artefacts) are history: they remain in the repo but carry no confirmatory claim, because
+(a) their pairing was positional, not seed-keyed, and (b) their BH families differed per run
+(m = 2 → 8 → 0 → 1; `docs/_audit/12_stats_review.md` §3.2–§3.3).
+
+### 9.2 Hypothesis (frozen)
+
+**H-P2 (recovery speed, primary):** After a component fault is detected and blacklisted,
+the KG-primed agent (`ql_true`) re-converges to a goal-reaching policy in **fewer episodes**
+than the tabula-rasa agent (`ql_false`), in every Tier-1 cell.
+
+- As coded: *"The headline Phase-2 claim is: recovery(ql_true) < recovery(ql_false) — the KG
+  prior lets the agent re-align over the surviving components faster than a learner that
+  must rediscover structure from scratch"* (`analysis/phase2_recovery.py` module docstring).
+- Prediction: `mean_diff_true_minus_false < 0` with q ≤ 0.05 (BH within the §9.5 family) for
+  every Tier-1 cell.
+- Falsified per cell if the mean difference is ≥ 0 or q > 0.05.
+
+**Detection latency (secondary, no directional hypothesis):** `DetectEpisode` contrasts are
+reported with full statistics and BH correction within the §9.6 detection family. No
+direction is predicted — instant blacklisting can make either arm detect first depending on
+which arm's greedy policy touches the faulty component earlier. Detection **recall**
+(fraction of runs with `DetectEpisode ≥ 0`) is reported descriptively per arm.
+
+### 9.3 Metric definitions (frozen, as coded)
+
+1. **DetectEpisode** — the adapt episode at which the physics-recheck detector blacklists
+   the defect component; −1 if never detected. Detection success = `DetectEpisode ≥ 0`
+   (`analysis/phase2_recovery.py::collect_arm`, "detected" filter).
+2. **ReconvergeEpisode** — the episode at which the **policy-stability recovery detector**
+   fires: the greedy joint policy (`jointArgmaxAction` over every state, blacklisted actions
+   excluded) has remained identical for `RECOVERY_WINDOW = 50` consecutive episodes after
+   the blacklist (property `fault.recover.window`, default 50 —
+   `src/env/tools/QLearner.java#L330`; detector advance/read:
+   `QLearner.java#L1846-L1867`); −1 if the budget expires first.
+3. **RecoveryEpisodes (primary metric)** = `ReconvergeEpisode − DetectEpisode`, computed
+   only when both are ≥ 0, else −1 ("did not re-converge") —
+   `src/env/tools/QLearner.java#L1464`:
+   `rec = (reconvergeEp >= 0 && detectEp >= 0) ? (reconvergeEp - detectEp) : -1`.
+   Lower is better. Rows with value −1 are excluded from the per-arm success lists and
+   therefore from pairing (`analysis/phase2_recovery.py::collect_arm`, "reconverged" filter).
+4. **RecoveredGoalRate** — fraction of greedy (ε = 0) evaluation episodes in which the FINAL
+   post-recovery policy reaches the (effective) goal; distinguishes a policy that merely
+   *stopped changing* from one that *reaches the goal* (script docstring). For degraded
+   cells (labmon/lowsun) the effective goal is the proof-gated best-effort rank.
+5. **Goal-reaching threshold** = `_GOAL_REACHING_THRESHOLD = 0.5`
+   (`analysis/phase2_recovery.py`): a replica counts as goal-reaching iff it re-converged
+   AND `RecoveredGoalRate ≥ 0.5`; an arm's `goal_reaching_rate` = goal-reaching replicas /
+   n_runs.
+
+### 9.4 Tier rules (frozen)
+
+- **Well-posed set** (recovery-speed contrast *defined*; a deterministic post-fault survivor
+  path exists): the 11 profiles in `_WELL_POSED_RECOVERY`
+  (`analysis/phase2_recovery.py`): `lab3_f1dead`, `lab3_f1inv`, `lab3_f1dead_z2`,
+  `lab3_f1inv_z2`, `lab3_f1bdead`, `lab3_f1binv`, `lab2_f1bdead`, `lab2_f1binv`,
+  `labmon_f1dead`, `lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`. All other
+  profiles are **ill-posed** (lone surviving actuator is protected, or the only survivor is
+  sun-gated): reported descriptively, never in the recovery family.
+- **Tier-1 (confirmatory)** = well-posed AND `goal_reaching_rate ≥ 0.5` in **both** arms
+  (`analysis/phase2_recovery.py::classify_recovery_tier`). Only Tier-1 cells enter the
+  recovery BH family.
+- **Tier-2 (descriptive)** = well-posed but not goal-reaching in both arms: full statistics
+  reported, **no q-value** (their number is time-to-stable-but-futile-policy, not recovery).
+- The stratifier (task achievability) is a property of the environment, symmetric across
+  arms, so conditioning on it does not bias the KG-vs-vanilla contrast.
+
+### 9.5 The ONE pooled Tier-1 recovery family (frozen): m = 8
+
+BH-FDR is applied **once**, over exactly these 8 cells (`RecoveryEpisodes`,
+`p_bootstrap` two-sided as input), significance threshold q ≤ 0.05:
+
+| # | Cell | Tier-1 evidence at freeze (goal-reaching ql_true / ql_false) |
+|---|---|---|
+| 1 | `lab3_f1dead` | 0.9 / 1.0 (`phase2_ext_results/analysis/out/phase2_recovery_ci.csv`) |
+| 2 | `lab3_f1dead_z2` | 1.0 / 1.0 (same file) |
+| 3 | `lab3_f1bdead` | 1.0 / 1.0 (same file) |
+| 4 | `lab3_f1binv` | 1.0 / 1.0 (same file) |
+| 5 | `lab2_f1bdead` | 1.0 / 0.9 (same file) |
+| 6 | `labmon_f1dead` | confirmatory (`labmon_ci_results/phase2-consolidated/analysis/out/phase2_recovery_paired.csv`) |
+| 7 | `lab3_f2dead_lowsun` | confirmatory (`docs/PHASE2_5B_LAB3_RESULTS.md`, run 28866807391) |
+| 8 | `labmon2_f2dead_lowsun` | confirmatory (`docs/PHASE2_5_LABMON2_RESULTS.md`, run 28884717500) |
+
+Excluded from the family, frozen as **Tier-2 descriptive**: `lab3_f1inv` (0.1/0.0),
+`lab3_f1inv_z2` (0.0/0.1), `lab2_f1binv` (0.5/0.3 in its run of record, §9.7 —
+below threshold in the vanilla arm; `docs/PHASE1_TO_PHASE2_CHANGES.md` §21.9).
+
+The family is frozen **by enumeration**: m = 8 regardless of what the pooled re-analysis
+shows. If the pooled data reclassifies an enumerated cell's tier, the cell **stays in the
+family** (m unchanged) and the flip is reported as a registered deviation next to the
+realized `recovery_tier` column — cells are not silently removed or added.
+
+### 9.6 Detection family (frozen): m = 8, degenerate rows excluded
+
+Under instant blacklisting, `DetectEpisode` is **identically 0 in both arms for every
+replica** in 10 of the 18 cells (verified on the raw run-of-record CSVs at freeze time):
+`lab1_f1dead`, `lab2_f1dead`, `lab2_f1inv`, `lab2_f2dead`, `lab2_f2inv`, `lab3_f2dead`,
+`lab3_f2inv`, `labmon_f1dead`, `lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`. Those rows
+are a constant, not evidence of parity (Δ=0, p=1.0 — `docs/_audit/12_stats_review.md`
+§3.4); they are **excluded from the detection BH family** and reported descriptively.
+
+The detection family is therefore exactly the 8 non-degenerate cells:
+`lab3_f1dead`, `lab3_f1inv`, `lab3_f1dead_z2`, `lab3_f1inv_z2`, `lab3_f1bdead`,
+`lab3_f1binv`, `lab2_f1bdead`, `lab2_f1binv` — m = 8, frozen by enumeration under the same
+no-silent-change rule as §9.5.
+
+### 9.7 Analysis set (frozen): one run of record per cell, seed-keyed pairing
+
+**Replica** = one (run, seed) adapt session; seeds 1–10; both arms of a pair share the
+training seed. **Pairing is by seed key** extracted from the artefact path (the
+`seed<N>` path component, as `analysis/phase4_energy.py::_seed_token` already does for
+Phase 4), never by list position; the `seeds_paired` column records the exact seeds used
+per contrast. Replicas whose metric value is −1 (not detected / not re-converged) drop out
+of that metric's pairs; `n_paired` therefore equals the number of seeds valid in **both**
+arms.
+
+**Run of record per cell** (the latest green run of the final instrument — instant
+blacklist + policy-stability window 50 + `RecoveredGoalRate` certification):
+
+| Cells | Run of record | Local raw data |
+|---|---|---|
+| `lab1_f1dead`, `lab2_f1dead`, `lab2_f1inv`, `lab2_f2dead`, `lab2_f2inv`, `lab3_f2dead`, `lab3_f2inv` | 28590019536 (Phase 2.3, commit `b2adca1`) | `phase2_results_v6/recovery_root/` |
+| `lab3_f1dead`, `lab3_f1inv`, `lab3_f1dead_z2`, `lab3_f1inv_z2`, `lab3_f1bdead`, `lab3_f1binv`, `lab2_f1bdead` | 28745352239 (Phase 2.4, commit `282acc4`) | `phase2_ext_results/recovery_root/` |
+| `lab2_f1binv` | 28750100413 (§21.9 "run of record" backfill) | `phase2_binv_backfill/phase2-consolidated/recovery_root/` |
+| `labmon_f1dead` | 28863439179 (Phase 2.5) | `labmon_ci_results/phase2-consolidated/recovery_root/` |
+| `lab3_f2dead_lowsun` | 28866807391 (Phase 2.5b) | `phase2_lowsun_results/run_28866807391/recovery_root/` |
+| `labmon2_f2dead_lowsun` | 28884717500 (Phase 2.5) | `phase2_lowsun_results/run_28884717500/recovery_root/` |
+
+**Excluded from confirmatory analysis** (reported as history/replication only):
+
+- Runs 27470382799 (v1), 27499405083 (v2), 27507087176 (v3), 27529585379 (v4),
+  27547019772 (v5): superseded instruments — v1 used a goal-based reconvergence criterion
+  (0 % recovery), v2–v5 used counter-based fault detection (DetectEpisode ≈ 3–145) that the
+  instant blacklist later replaced. Pooling them with instant-blacklist rows would
+  mix instruments inside a cell.
+- Run 28590019536's `lab3_f1dead` / `lab3_f1inv` cells: superseded by 28745352239, whose
+  commit (`282acc4`) added the active KG-driven diagnostic probe to the pre-detection
+  monitoring regime (`git diff b2adca1 282acc4 -- src/env/tools/QLearner.java`,
+  `src/agt/illuminance_controller_agent_adapt.asl`), i.e. the monitoring instrument
+  changed. The v6 cells remain a same-direction independent replication (Δ = −204.9,
+  q = 0.0 for `lab3_f1dead`) and are cited as such, descriptively.
+- Run 28745352239's `lab2_f1binv` cell: superseded by the 28750100413 backfill, declared
+  the run of record in `docs/PHASE1_TO_PHASE2_CHANGES.md` §21.9 (the ext cell lost
+  `ql_false` seed 8 to an infrastructure flake).
+- Repo-root `recovery_stereotypes_*.csv` leftovers: single-row local runs with no CI
+  provenance and (mostly) no paired arm; not part of any registered run.
+
+### 9.8 Statistical protocol (frozen)
+
+| Component | Value |
+|---|---|
+| Primary test | Paired bootstrap on per-seed values, 10 000 resamples, RNG seed 0xC1 (`analysis/sweep_report.py` helpers, unchanged) |
+| p-value entering BH | `p_bootstrap` (two-sided); direction read from the sign of the mean difference |
+| Backup tests | Wilcoxon signed-rank (two-sided), Cliff's δ effect size |
+| BH-FDR families | §9.5 recovery (m = 8) and §9.6 detection (m = 8), applied independently; never recomputed per run |
+| Significance | q ≤ 0.05 |
+| Pairing | seed-keyed within the cell's run of record (§9.7) |
+| n per cell | 10 seeds per arm (before per-metric −1 dropout) |
+
+Single-run CI invocations of `analysis/phase2_recovery.py` (the `phase2.yml` aggregate
+step) cover only a subset of the registered families; they emit `q = nan` with a notice
+and carry **no confirmatory claim**. Only the pooled invocation over the full §9.7 analysis
+set produces the registered q-values.
+
+### 9.9 Registered replication — `lab3_f1dead`, seeds 11–20 (added 2026-07-08, pre-dispatch)
+
+**Trigger (disclosed):** the pooled seed-paired re-analysis under §9.1–§9.8 moved
+`lab3_f1dead` from its published q = 0.028 (positionally paired) to **q = 0.053**
+(`docs/phase2_registered_reanalysis_delta.md` §4–§5) — the only §9.5 family member on the
+wrong side of 0.05. This subsection registers a one-shot replication **before** the run is
+dispatched. The escalation is data-dependent and is reported as such.
+
+**Run specification (frozen):** `phase2.yml` on branch `phase2-instant-blacklist` at the
+commit that introduces this subsection, with inputs
+`adapt_profiles="lab3_f1dead"`, `seeds="11,12,13,14,15,16,17,18,19,20"` (disjoint from
+every prior Phase-2 seed), `run_mode="phase1"`, `adapt_episodes="0"`,
+`publish_results=true`.
+
+**Analysis rule (frozen before data):**
+
+1. On completion, the `phase2-consolidated` artifact is downloaded to
+   `phase2_lab3f1dead_replication/run_<run_id>/` and
+   `_RUN_OF_RECORD["lab3_f1dead"]` in `analysis/phase2_recovery.py` is repointed to its
+   `recovery_root/`. The replication **replaces** run 28745352239 as the cell's run of
+   record; it is **not pooled** with it (the codebase has moved since commit `282acc4` —
+   monitor-stereotype / best-effort-degradation machinery — so same-instrument pooling is
+   not defensible).
+2. The single pooled `--registered` invocation is re-run. The §9.5 family membership and
+   m = 8 are unchanged; only the `lab3_f1dead` p-value entering the family comes from the
+   replication (seed-paired within the run, seeds 11–20).
+3. The superseded ext measurement (Δ = −67.4, q = 0.053) is reported permanently alongside
+   the replication in the thesis, whatever the outcome.
+
+**Decision rule (one-shot):** if the replication shows Δ < 0 with q ≤ 0.05, the cell is
+confirmed. Otherwise the cell is reported as directionally consistent but unsupported, and
+**no further reruns of this cell are permitted** under this registration.
+
+### 9.10 Registered amendment — action-space inversion re-run (added 2026-07-12, post-run; disclosed in full)
+
+**Trigger (disclosed, instrument change):** the action-space inversion
+(`docs/ACTION_SPACE_INVERSION.md`, code commits `6fffd41` + `8c386f8`, follow-up fixes
+`a9530b9`/`b1630b8`/`6c727b6`) changed the instrument for **both** arms: the action space
+is now enumerated from the WoT TD contract alone, and the stereotype layer is a pure
+knowledge-enrichment pass. Under the pre-inversion code, both arms received their action
+space from the stereotype SPARQL discovery — i.e. part of the measured "KG advantage" could
+have been action-space asymmetry rather than knowledge. Because a faulty cell must never
+warm-load a table trained under a different code state, every §9 cell was re-run wholesale
+post-inversion. This subsection registers the re-run, repoints §9.7, and reports the
+realized outcome. The §9.2 hypothesis, §9.3–§9.6 metric/tier/family definitions and the
+§9.8 protocol are **unchanged**; per §9.5 no cell is added to or removed from any family.
+
+**Runs of record (all on commit `6c727b6`, `phase2.yml`, self-contained
+train-clean→adapt pairing, 2026-07-11):**
+
+| Run | CI run ID | Cells | Seeds |
+|---|---|---|---|
+| 1A | 29148475671 | lab1_f1dead, lab2_f1dead, lab2_f1inv, lab2_f2dead, lab2_f2inv, lab3_f1dead*, lab3_f1inv, lab3_f2dead | 1–10 |
+| 1B | 29151540231 | lab3_f2inv, lab3_f1dead_z2, lab3_f1inv_z2, lab3_f1bdead, lab3_f1binv, lab2_f1bdead, lab2_f1binv | 1–10 |
+| 2 | 29155539633 | labmon_f1dead, lab3_f2dead_lowsun, labmon2_f2dead_lowsun | 1–10 |
+| 3 | 29157197853 | labmon_infoonly_f1dead, labmon_nostereo_f1dead, labmon2_infoonly_f2dead_lowsun, labmon2_nostereo_f2dead_lowsun (Phase 2.6; descriptive only, not family members) | 1–10 |
+| 1C | 29163456132 | lab3_f1dead (one-shot replication re-instantiating the §9.9 protocol on the new instrument) | 11–20 |
+
+\* Per the §9.9 structure, `lab3_f1dead`'s run of record is the seeds-11–20 replication
+(Run 1C); the Run-1A seeds-1–10 measurement is reported alongside
+(arm means 492.7 vs 420.0 episodes — same adverse direction, independently observed).
+
+Two earlier post-inversion dispatches are **retired and carry no evidential weight**:
+29107822998 (failed wholesale — stale fault-flow generator patterns, fixed in `a9530b9`)
+and 29115969476 (221/222 jobs green but the aggregate was contaminated by 26 stale
+pre-inversion CSVs accidentally committed at the inversion commit; fixed in `b1630b8`).
+Neither affects any pre-inversion registered result. The `results`-branch copies of the
+runs of record were later clobbered by a Phase-4 publish (`-OverwriteResultsBranch`,
+2026-07-12); the archived raw data was therefore recovered from each run's
+`phase2-consolidated` CI artifact into `phase2_postinv/run_<run_id>/recovery_root/`
+(committed to the repo), and `_RUN_OF_RECORD` in `analysis/phase2_recovery.py` was
+repointed wholesale (pre-inversion table preserved as `_RUN_OF_RECORD_PRE_INVERSION`).
+
+**Realized outcome — §9.5 recovery family (RecoveryEpisodes, ql_true − ql_false, m = 8,
+pooled BH; source `analysis/out_phase2_registered_postinv/phase2_recovery_paired.csv`):**
+
+| Cell | n | ql_true | ql_false | Δ | 95 % CI | Cliff's δ | q | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| `lab2_f1bdead` | 10 | 75.6 | 382.1 | **−306.5** | [−439.5, −174.6] | −0.92 | **0.0000** | significant, KG faster |
+| `lab3_f2dead_lowsun` | 10 | 63.5 | 134.9 | **−71.4** | [−102.3, −41.3] | −0.84 | **0.0000** | significant, KG faster |
+| `labmon2_f2dead_lowsun` | 10 | 187.1 | 334.7 | **−147.6** | [−230.9, −61.4] | −0.76 | **0.0021** | significant, KG faster |
+| `lab3_f1dead_z2` | 9 | 511.1 | 571.3 | −60.2 | [−120.1, −4.3] | −0.28 | 0.0664 | marginal, ns |
+| `lab3_f1bdead` | 10 | 198.1 | 288.1 | −90.0 | [−265.0, +86.5] | −0.33 | 0.365 | ns |
+| `lab3_f1binv` | 10 | 398.5 | 405.0 | −6.5 | [−138.4, +116.0] | −0.02 | 0.929 | ns |
+| `labmon_f1dead` | 10 | 84.5 | 62.3 | +22.2 | [−15.8, +57.2] | +0.05 | 0.328 | ns, sign flipped |
+| `lab3_f1dead` (seeds 11–20) | 9 | 505.0 | 420.0 | +85.0 | [−31.6, +205.1] | +0.43 | 0.276 | ns, sign flipped |
+
+**`lab3_f1dead` §9.9-analog verdict:** the re-instantiated one-shot replication (Run 1C)
+shows Δ > 0 — the cell is **unsupported** on the post-inversion instrument, and no further
+reruns of this cell are permitted. The pre-inversion §9.9 confirmation (Δ = −121.1,
+q = 0.00027) remains reported as a pre-inversion-instrument measurement.
+
+**Realized outcome — §9.6 detection family (DetectEpisode, m = 8):** no significant
+contrast (min q = 0.656). Four family cells (`lab3_f1dead`, `lab3_f1inv`,
+`lab3_f1dead_z2`, `lab3_f1inv_z2`) realized **degenerate 0-vs-0 detection in both arms**
+post-inversion; per the §9.5/§9.6 no-silent-change rule they stay in the family (p = 1,
+reported as a realized-degeneracy deviation from the freeze-time classification). The
+pre-inversion adversarial contrast (`lab3_f1inv` Δ = +3.0, q = 0.0048, KG slower to
+detect) **did not survive the inversion** — detection is now instant in both arms for
+every lamp-fault cell; only the four blind-fault cells detect at ep ≈ 6–7 (probe-bound,
+all null). Realized `recovery_tier` did not flip for any §9.5 family member (all 8
+remained recovery-well-posed); `lab2_f1binv` (Tier-2 descriptive) collapsed to n = 4
+paired seeds.
+
+**Registered conclusion (supersedes §9.9's "confirmed on every cell" as the confirmatory
+claim of record):** on the capability-equalized instrument, H-P2 is supported in **3 of 8**
+family cells (q ≤ 0.05: `lab2_f1bdead`, `lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`),
+marginal in 1 (`lab3_f1dead_z2`), null in 2, and sign-flipped (ns) in 2. Six of eight
+deltas remain negative. *Non-registered interpretive note, disclosed as commentary:* the
+cells that stay significant are exactly those where recovery requires re-ranking
+multiple surviving actuators (blind + lamp survivor, or multi-actuator triage under
+pinned low sun) — i.e. where structural knowledge, not action-space access, is the
+binding constraint; the pre-inversion 8/8 result therefore conflated a real knowledge
+effect with an action-space asymmetry that the inversion removed. Both instruments'
+results are reported side by side in the thesis; only the post-inversion numbers carry
+confirmatory weight.
+
+### 9.11 Registered exploratory extension — multi-blind cell `lab3_f2bdead` (added 2026-07-12, pre-dispatch)
+
+**Motivation (disclosed):** the "several components broken at once" family
+(`lab2_f2dead/f2inv`, `lab3_f2dead/f2inv`) injects Causes lamps only, and every lamp
+multi-fault cell is either ill-posed (the survivors are sun-gated) or a degraded
+best-effort cell (`*_lowsun`). The §9.10 interpretive commentary reads the post-inversion
+outcome as "structural knowledge pays where recovery requires re-ranking multiple
+surviving actuators." `lab3_f2bdead` — BOTH lab3 blinds dead (own-zone 0.50·sun and
+cross-zone 0.30·sun contributions zeroed for each) — is designed to probe that reading on
+a new configuration: it is (a) the first multi-fault cell in the **Mediates** class,
+requiring two iterations of the active-probe detect→blacklist→warm-restart loop (each
+blind is only falsifiable on the OPEN probe under sun rank ≥ 2), and (b) the first
+**well-posed, full-recovery** multi-fault cell — survivors Z1Light, Z2Light, Spotlight
+keep both zones deterministically rank-3 reachable (25 + 400 own + 100 cross + 150
+spotlight).
+
+**Status (frozen):** EXPLORATORY. Per the §9.5/§9.6 no-silent-change rule the frozen
+families are **unchanged** (recovery m = 8, detection m = 8): `lab3_f2bdead` never enters
+either family and carries **no q-value** (`analysis/phase2_recovery.py` reports its
+paired statistics with `in_registered_family = False`; the same 8 p-values enter each BH
+family as before). The §9.4 well-posed enumeration is amended 11 → 12 by this subsection
+(`_WELL_POSED_RECOVERY` gains the cell; the stratifier remains a property of the
+environment, symmetric across arms). One dispatch only; the outcome is reported whatever
+it is, and no rerun-until-significant is permitted.
+
+**Directional expectation (stated before dispatch; exploratory, non-confirmatory):**
+under the §9.10 binding-constraint reading, recovery here demands re-ranking three
+surviving actuators after two blacklists, so Δ = RecoveryEpisodes(ql_true) −
+RecoveryEpisodes(ql_false) < 0 is expected. A null would instead indicate that the
+warm-started lamp policy already dominates in both arms — the blinds are redundant under
+a goal-only reward (the same redundancy that motivated the active probe), so losing them
+may not force any re-ranking at all. Either outcome is informative commentary on the
+binding-constraint interpretation; neither carries confirmatory weight.
+
+**Run specification (frozen):** `phase2.yml` on branch `kg-crosszone-coupling-mid` at the
+commit that introduces this subsection, with inputs `adapt_profiles="lab3_f2bdead"`,
+`seeds="1,2,3,4,5,6,7,8,9,10"`, `run_mode="phase1"`, `adapt_episodes="0"`,
+`publish_results=true`. Detection is expected at ep ≈ 6–8 per blind (probe-bound, as in
+the f1b* cells); DetectEpisode is reported descriptively only.
+
+**Analysis rule (frozen before data):** on completion the `phase2-consolidated` artifact
+is downloaded to `phase2_f2bdead/run_<run_id>/` (committed to the repo) and
+`_RUN_OF_RECORD["lab3_f2bdead"]` in `analysis/phase2_recovery.py` is pointed at its
+`recovery_root/`; the pooled `--registered` invocation is re-run. The cell's row appears
+in `phase2_recovery_paired.csv` with full statistics and q = nan; every §9.5/§9.6
+q-value is unaffected.
+
+**Realized outcome (added 2026-07-12, post-run):** the registered dispatch ran green as
+CI run **29187088096** (commit `bb6c4e4` — the commit carrying this subsection — seeds
+1–10, both arms, 40/40 matrix jobs). Per the frozen analysis rule the artifact is
+archived at `phase2_f2bdead/run_29187088096/recovery_root/` (committed),
+`_RUN_OF_RECORD["lab3_f2bdead"]` points at it, and the pooled `--registered` re-run
+(output `analysis/out_phase2_registered_postinv/`) adds exactly the cell's two rows;
+every §9.5/§9.6 q-value is byte-identical to the §9.10 record (verified by diff).
+
+- **RecoveryEpisodes (primary, exploratory):** ql_true 570.0 vs ql_false 447.7,
+  Δ = **+122.3** (KG *slower*), 95 % CI [−11.5, +265.3], bootstrap p = 0.076
+  (two-sided), Wilcoxon p = 0.232, Cliff's δ = +0.38, n = 10 paired, q = nan by
+  construction. **The directional expectation (Δ < 0) was not realized.**
+- **DetectEpisode (descriptive):** ql_true 3.8 vs ql_false 5.8, Δ = −2.0,
+  95 % CI [−3.8, −0.1], bootstrap p = 0.047. Both blinds were detected and
+  blacklisted in **all 20 replicas** (recall 1.0 in both arms; first blacklist at
+  ep 2–8, second at ep 3–87, probe-bound as expected) — the iterative Mediates
+  detect→blacklist→warm-restart loop worked as designed.
+- **Tier:** RecoveredGoalRate 0.755 (ql_true) / 0.940 (ql_false); reconvergence 1.0
+  in both arms. The cell classifies confirmatory, remains outside the frozen family,
+  and the script emitted the expected no-q notice.
+
+*Non-registered interpretive commentary, disclosed:* the outcome falls on the
+**redundancy** side of the two pre-stated readings, with an adverse (ns) trend rather
+than a clean null. Losing both blinds forced no re-ranking the KG could accelerate:
+the deterministic survivors (own lamps + spotlight) are exactly the levers the
+warm-started policy already ranks correctly, so recovery in both arms is dominated by
+generic re-learning of the 2048-state lab3 policy under boosted exploration — the
+same regime as the lab3 lamp-fault cells (`lab3_f1dead` +85.0, `labmon_f1dead`
++22.2), whose adverse-trend pattern this cell reproduces. The forward test therefore
+**narrows** the §9.10 binding-constraint reading: multi-survivor re-ranking is not
+sufficient for a KG advantage — the advantage appears only where the fault demotes
+levers the warm-started policy relied on and promotes survivors it had learned to
+ignore (lab2_f1bdead, the lowsun triage cells), not where the surviving set is the
+already-dominant one. Per the one-dispatch rule this cell is closed; no rerun is
+permitted.
+
+---
+
+*Commit this file before the first `summary_table_ci.csv` is produced by CI. `git log docs/pre_registration.md` must show a timestamp earlier than any commit on the `results` branch containing paper-sweep aggregated outputs.*
+
+### 9.12 Registered corrective amendment — protocol v2 (added 2026-07-22 pre-data; results 2026-07-24)
+
+**Every §9 empirical result through §9.11 is historical, protocol-affected
+evidence.** The §9.10 record (3/8 Tier-1 supported, detection null) and the
+§9.11 exploratory result were produced under three protocol defects — the
+adaptation loops requested contiguous scenario IDs against non-contiguous
+files (silent unseeded random resets in ~17–30% of episodes), start states
+were recorded before the settle wait, and the detector blacklisted healthy
+components (treatment-correlated inside the strongest cell) — documented in
+`docs/PHASE2_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+
+The corrective campaign is registered in
+`docs/phase2_correction_registration_2026-07-22.md` (pre-data; seeds 1–20;
+detector v2; explicit censoring; families of §9.5/§9.6 unchanged in
+membership) and archived under `phase2_v2_corrected/` (runs `30001857104`,
+`30001867521`, `30001878310`, `30001888910`; two pre-data dispatch-failure
+rounds documented in `docs/phase2_v2_dispatch_record_2026-07-22.md`).
+**Corrected outcome (governs): Tier-1 2 supported / 3 adverse / 3 null;
+zero false-positive blacklist events anywhere; KG-arm dead-lamp detection
+0/20 in every cross-coupled lab3 cell (policy-dependent recall loss of the
+structural-maskability abstain).** Full report:
+`docs/thesis_chapter_phase2.md` §10 and
+`phase2_v2_corrected/CAMPAIGN_MANIFEST.md`.
+
+### 9.13 Registered re-execution — delivered low-sun cells (added 2026-11-11, pre-data)
+
+Round-2 audit findings R2-001/R2-002 established that the two low-sun Tier-1
+cells of §9.5 (`lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`) never received
+their low-sun treatment under the §9.12 corrected protocol. Their re-execution
+with the pin delivered at scenario level is registered in
+`docs/phase2_lowsun_rerun_registration_2026-11-11.md` (binding; new m = 2
+recovery and detection families over the two cells; the §9.12 m = 8 tables are
+not recomputed). The companion Phase-1b extended-arm re-execution is registered
+in `docs/phase1b_extended_rerun_registration_2026-11-11.md`.
+
+## §10 Phase-1b addendum (2026-07-26) — knowledge-necessity package
+
+The Phase-1b confirmatory campaign (labrel relevance ladder, labrel8s
+statefulness comparison, labband exact-band control, lab4chain3 depth-3
+dependency; arms phase1b_v2_baseline / redundancy_only / kg_frozen /
+extended) is registered in `docs/phase1b_registration_2026-07-26.md`
+(BINDING, pre-data): frozen implementation `a8d3cb40`, reachability
+certificate index `8444d7d7…`, BH family m=5 (M1–M4, M6; M5 prospectively
+exploratory by the frozen power rule), N=20 (seeds 1..20), pilot block
+1001–1010 permanently disjoint (`docs/PHASE1B_POWER_PROTOCOL.md`,
+`docs/phase1b_pilot_dispatch_record_2026-07-25.md`). Archives:
+`phase1b_corrected/`.
+
+## §11 Phase-2b-A retrospective protocol pointer (2026-07-27)
+
+**DESCRIPTIVE/SIGHTED — NOT A PREREGISTRATION**
+
+The frozen protocol at `docs/PHASE2_QGAP_RETROSPECTIVE.md` governs the
+Phase-2b-A start-state Q-gap proxy and detector-opportunity retrospective. It
+was written after the corrected Phase-2 recovery and detection outcomes were
+known but before the proxy was computed on real corrected artifacts. It is a
+hypothesis-generating audit, not a prospective test; its fixed panels,
+definitions, exclusions, sensitivities, and C2 screening gates cannot confer
+prospective status on the sighted data. Any later C2 requires a separate plan
+written before new adaptation data are dispatched.

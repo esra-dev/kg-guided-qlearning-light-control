@@ -1,0 +1,132 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase4_v2_corrected",
+  "archive": "results/phase4_v2_corrected",
+  "role": "accepted",
+  "phase": "4",
+  "description": "Phase 4 corrected campaign (protocol v2): two seed-half runs on the lab4, lab4dual, lab4chain and lab5 profiles.",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase4.yml",
+    "workflow_note": "Every archived workflow_inputs.json of this campaign records \".github/workflows/phase1.yml\", although the runs were dispatched through workflow_actual (named in each run's ARCHIVE_MANIFEST.md). The receipt value is pinned as it is.",
+    "all_runs": {
+      "head_sha": "90e53f8b087fc390a7ad51a0187b81c89c21c64e",
+      "profiles": [
+        "lab4",
+        "lab4dual",
+        "lab4chain",
+        "lab5"
+      ],
+      "publish_results": true,
+      "ref": "refs/heads/phase234-correction-2026-07-22",
+      "run_mode": "phase4_v2",
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "29926341581": {
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "29926354783": {
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      }
+    }
+  },
+  "tables": [
+    {
+      "file": "analysis/registered/phase4_v2_registered_family.csv",
+      "key": [
+        "registered_cell"
+      ],
+      "rows": [
+        "lab4",
+        "lab4dual",
+        "lab4chain",
+        "lab5"
+      ],
+      "all_rows": {
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m4": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "lab4": {
+          "mean_paired_difference": {
+            "float": -0.6950000000000001
+          }
+        },
+        "lab4dual": {
+          "mean_paired_difference": {
+            "float": -0.7450000000000001
+          }
+        },
+        "lab4chain": {
+          "mean_paired_difference": {
+            "float": -0.734375
+          }
+        },
+        "lab5": {
+          "mean_paired_difference": {
+            "float": 0.043125000000000024
+          }
+        }
+      }
+    }
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "run_*/SHA256SUMS.csv",
+        "base": "."
+      }
+    ],
+    "lf_committed": [
+      "run_29926341581/analysis/out/first_goal_table.csv",
+      "run_29926341581/analysis/out/learning_speed_table.csv",
+      "run_29926341581/analysis/out/learning_speed_tests.csv",
+      "run_29926341581/analysis/out/paired_tests.csv",
+      "run_29926341581/analysis/out/phase4_energy_ci.csv",
+      "run_29926341581/analysis/out/phase4_energy_paired.csv",
+      "run_29926341581/analysis/out/summary_table.csv",
+      "run_29926341581/analysis/out/summary_table_ci.csv",
+      "run_29926341581/analysis/out/weakness_heatmap.csv",
+      "run_29926354783/analysis/out/first_goal_table.csv",
+      "run_29926354783/analysis/out/learning_speed_table.csv",
+      "run_29926354783/analysis/out/learning_speed_tests.csv",
+      "run_29926354783/analysis/out/paired_tests.csv",
+      "run_29926354783/analysis/out/phase4_energy_ci.csv",
+      "run_29926354783/analysis/out/phase4_energy_paired.csv",
+      "run_29926354783/analysis/out/summary_table.csv",
+      "run_29926354783/analysis/out/summary_table_ci.csv",
+      "run_29926354783/analysis/out/weakness_heatmap.csv"
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase4_v2.py",
+      "{archive}"
+    ],
+    "data": "local",
+    "requires": [
+      "{archive}/run_*/benchmark/results_seed*/*/training_stereo_*/qtable_*.csv",
+      "{archive}/run_*/benchmark/results_seed*/*/*/benchmark_results_*.csv"
+    ],
+    "approx_seconds": 20,
+    "note": "Needs the ignored benchmark and Q-table files (about 0.7 GB)."
+  }
+}

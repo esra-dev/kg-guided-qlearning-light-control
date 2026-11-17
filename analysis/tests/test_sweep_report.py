@@ -1,0 +1,226 @@
+"""Unit tests for analysis/sweep_report.py statistical helpers.
+
+These cover the building blocks that drive the multi-seed CI table and the
+paired_tests.csv output. They are deliberately self-contained (no Gradle/CI
+artefacts required) and use deterministic RNGs so results are reproducible.
+
+Run with:
+    python -m pytest analysis/tests -q
+"""
+
+from __future__ import annotations
+
+import math
+import sys
+from pathlib import Path
+
+import pytest
+
+# Make the parent ``analysis`` package importable when invoked directly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from analysis import sweep_report as sr  # noqa: E402  (path-tweak above)
+
+
+# ---------------------------------------------------------------------------
+# Bootstrap CI
+# ---------------------------------------------------------------------------
+
+def test_bootstrap_ci_single_value_is_degenerate():
+    # n < 2 gives a NaN interval, not a zero-width one.
+    mean, lo, hi = sr._bootstrap_ci([7.5], iters=500)
+    assert mean == 7.5
+    assert math.isnan(lo) and math.isnan(hi)
+
+
+def test_bootstrap_ci_constant_series_has_zero_width():
+    mean, lo, hi = sr._bootstrap_ci([3.0] * 5, iters=500)
+    assert mean == lo == hi == 3.0
+
+
+def test_bootstrap_ci_brackets_true_mean():
+    rng_sample = [1.0, 2.0, 3.0, 4.0, 5.0]
+    mean, lo, hi = sr._bootstrap_ci(rng_sample, iters=2000)
+    assert math.isclose(mean, 3.0, abs_tol=1e-9)
+    assert lo <= mean <= hi
+    # 95% CI on n=5 of [1..5] should be roughly within (1, 5).
+    assert 1.0 <= lo <= 3.0 <= hi <= 5.0
+
+
+# ---------------------------------------------------------------------------
+# Paired bootstrap diff
+# ---------------------------------------------------------------------------
+
+def test_paired_bootstrap_diff_detects_clear_effect():
+    a = [10.0, 11.0, 9.0, 12.0, 10.5]
+    b = [1.0, 2.0, 0.5, 3.0, 1.5]
+    # Returns (mean_d, lo, hi, p two-sided, p one-sided positive, p one-sided negative).
+    mean_d, lo, hi, p, p_pos, p_neg = sr._paired_bootstrap_diff(a, b, iters=2000)
+    assert mean_d > 5.0
+    assert lo > 0  # CI excludes zero -> significant
+    assert hi > lo
+    assert p < 0.05
+    # mean_d > 0 → evidence against H_A:μ>0 should be small.
+    assert p_pos < 0.05
+    assert p_neg > 0.5
+
+
+def test_paired_bootstrap_diff_no_effect_keeps_p_large():
+    a = [1.0, 2.0, 3.0, 4.0, 5.0]
+    b = [1.1, 1.9, 3.05, 3.95, 5.05]
+    mean_d, lo, hi, p, _p_pos, _p_neg = sr._paired_bootstrap_diff(a, b, iters=2000)
+    assert abs(mean_d) < 0.1
+    assert lo <= 0 <= hi   # CI straddles zero
+    assert p > 0.3
+
+
+def test_paired_bootstrap_returns_nan_for_short_input():
+    out = sr._paired_bootstrap_diff([1.0], [2.0])
+    assert all(math.isnan(x) for x in out)
+
+
+# ---------------------------------------------------------------------------
+# Cliff's delta
+# ---------------------------------------------------------------------------
+
+def test_cliffs_delta_extremes():
+    # Strictly larger
+    assert sr._cliffs_delta([5, 6, 7], [1, 2, 3]) == pytest.approx(1.0)
+    # Strictly smaller
+    assert sr._cliffs_delta([1, 2, 3], [5, 6, 7]) == pytest.approx(-1.0)
+    # Identical -> ties only -> 0
+    assert sr._cliffs_delta([1, 2, 3], [1, 2, 3]) == pytest.approx(0.0)
+
+
+def test_cliffs_delta_partial_overlap():
+    a = [3, 4, 5]
+    b = [2, 4, 6]
+    # pairs: 3>2, 3<4, 3<6, 4=2(>), 4=4(tie), 4<6, 5>2, 5>4, 5<6
+    # gt count: (3,2),(4,2),(5,2),(5,4) -> 4
+    # lt count: (3,4),(3,6),(4,6),(5,6) -> 4
+    # delta = (4-4)/9 = 0
+    assert sr._cliffs_delta(a, b) == pytest.approx(0.0)
+
+
+def test_exact_signflip_has_nonzero_resolution_and_is_two_sided():
+    a = [1.0] * 20
+    b = [0.0] * 20
+    assert sr._paired_signflip_p(a, b) == pytest.approx(2 / (2 ** 20))
+    assert sr._paired_signflip_p(b, a) == pytest.approx(2 / (2 ** 20))
+
+
+def test_signflip_and_sign_test_handle_ties():
+    assert sr._paired_signflip_p([1, 2, 3], [1, 2, 3]) == 1.0
+    assert sr._exact_sign_test_p([1, 2, 4], [1, 3, 3]) == 1.0
+
+
+def test_paired_rank_biserial_extremes():
+    assert sr._paired_rank_biserial([2, 3, 4], [1, 2, 3]) == 1.0
+    assert sr._paired_rank_biserial([1, 2, 3], [2, 3, 4]) == -1.0
+    assert sr._paired_rank_biserial([1, 2], [1, 2]) == 0.0
+
+
+def test_phase1_v2_decomposition_handles_zero_thresholds_and_opposite_signs():
+    from analysis.phase1_v2_registered_family import _decomposition
+
+    assert _decomposition(0.0, 1.0)["category"] == "undefined_arm_c_zero"
+    assert _decomposition(3.0, -1.0)["category"] == \
+        "opposite_signs_not_reproduction"
+    assert _decomposition(-3.0, 1.0)["category"] == \
+        "opposite_signs_not_reproduction"
+    assert _decomposition(3.0, 0.5)["category"] == "less_than_one_third"
+    assert _decomposition(3.0, 1.5)["category"] == \
+        "between_one_third_and_two_thirds"
+    assert _decomposition(3.0, 2.5)["category"] == "more_than_two_thirds"
+
+
+def test_phase1_v2_registered_reader_orders_seed_directories_numerically(
+        tmp_path, monkeypatch):
+    from analysis import phase1_v2_registered_family as family
+
+    lexicographic = [(seed, tmp_path / f"results_seed{seed}")
+                     for seed in (1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                                  2, 20, 3, 4, 5, 6, 7, 8, 9)]
+    monkeypatch.setattr(family.sr, "find_seed_roots", lambda _root: lexicographic)
+    ordered = family._ordered_seed_roots(tmp_path)
+    assert [seed for seed, _ in ordered] == list(range(1, 21))
+
+
+def test_corrected_auc_is_episode_mean():
+    assert sr._auc_normalised([0, 1, 1, 0]) == pytest.approx(0.5)
+
+
+def test_corrected_first_goal_rejects_legacy_schema(tmp_path):
+    path = tmp_path / "legacy.csv"
+    path.write_text("StartStateIndex,FirstGoalEpisode\n1,7\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="rejects legacy"):
+        sr._read_first_goal_mean(path, require_v2=True)
+
+
+def test_corrected_first_goal_includes_censored_rows(tmp_path):
+    path = tmp_path / "v2.csv"
+    path.write_text(
+        "ProtocolVersion,ScenarioId,Presentations,FirstSuccessPresentation,Censored,AnalysisPresentation,TerminalAtStartPresentations\n"
+        "phase1-v2,1,300,1,false,1,300\n"
+        "phase1-v2,5,300,,true,301,0\n",
+        encoding="utf-8",
+    )
+    assert sr._read_first_goal_mean(path, require_v2=True) == pytest.approx(151.0)
+
+
+# ---------------------------------------------------------------------------
+# Benjamini-Hochberg
+# ---------------------------------------------------------------------------
+
+def test_bh_qvalues_are_monotone_and_bounded():
+    ps = [0.001, 0.01, 0.03, 0.05, 0.2, 0.4]
+    q = sr._bh_qvalues(ps)
+    assert all(0.0 <= x <= 1.0 for x in q)
+    # BH adjusted values for sorted [0.001,0.01,0.03,0.05,0.2,0.4] with m=6
+    # are non-decreasing in the sorted order.
+    sorted_q = [q[i] for i in sorted(range(len(ps)), key=lambda i: ps[i])]
+    for prev, cur in zip(sorted_q, sorted_q[1:]):
+        assert cur + 1e-12 >= prev
+
+
+def test_bh_qvalues_preserves_nan():
+    q = sr._bh_qvalues([0.01, float("nan"), 0.5])
+    assert math.isnan(q[1])
+    assert 0.0 <= q[0] <= 1.0
+    assert 0.0 <= q[2] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# Summary table
+# ---------------------------------------------------------------------------
+
+def test_write_summary_same_columns_keeps_first_row_order(tmp_path):
+    rows = [{"profile": "lab2", "mode": "ql_true", "x": 1},
+            {"profile": "lab2", "mode": "ql_false", "x": 2}]
+    sr.write_summary(tmp_path, rows)
+    text = (tmp_path / "summary_table.csv").read_text(encoding="utf-8")
+    assert text.splitlines() == ["profile,mode,x", "lab2,ql_true,1", "lab2,ql_false,2"]
+
+
+def test_write_summary_rows_with_different_columns(tmp_path):
+    """A run of one mode only gives rows whose columns differ; this must not fail."""
+    rows = [{"profile": "lab2", "mode": "ql_true", "x": 1},
+            {"profile": "lab2", "mode": "ql_true", "x": 2, "extra": 9}]
+    sr.write_summary(tmp_path, rows)
+    text = (tmp_path / "summary_table.csv").read_text(encoding="utf-8")
+    assert text.splitlines() == ["profile,mode,x,extra", "lab2,ql_true,1,", "lab2,ql_true,2,9"]
+
+
+# ---------------------------------------------------------------------------
+# Seed-root discovery
+# ---------------------------------------------------------------------------
+
+def test_find_seed_roots(tmp_path):
+    parent = tmp_path / "benchmark"
+    parent.mkdir()
+    for n in (1, 2, 7):
+        (parent / f"results_seed{n}").mkdir()
+    (parent / "results").mkdir()           # should be ignored
+    (parent / "results_seedXX").mkdir()    # malformed; ignored
+    out = sr.find_seed_roots(parent)
+    assert [s for s, _ in out] == [1, 2, 7]

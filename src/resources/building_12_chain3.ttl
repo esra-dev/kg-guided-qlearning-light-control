@@ -1,0 +1,506 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix brick:  <https://brickschema.org/schema/Brick#> .
+@prefix elem:   <http://www.w3id.org/elementary#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix qudtqk: <http://qudt.org/vocab/quantitykind/> .
+@prefix sosa:   <http://www.w3.org/ns/sosa/> .
+
+@prefix lab:    <http://example.org/was/lab#> .
+@prefix ws:     <http://example.org/was/lab/stereotypes#> .
+
+# ===========================================================================
+#  Knowledge graph of the lab lab4chain3: Phase 1b depth-3 power dependency.
+#  Loaded alone by the profile "lab4chain3" in src/agt/lab_profiles.asl
+#  (ont(["building_12_chain3.ttl"])); nothing outside this file is read.
+#  Device description: interactions-lab4chain3.ttl.
+#
+#  Room (simulator/simulator_flow_lab4chain3.json, port 1913): one zone, no
+#  blind, no spotlight. The ceiling lamp is wired through a smart plug, and
+#  the plug hangs off a circuit breaker:
+#      lamp_effective = Z1Light and PlugZ1 and Breaker
+#      Z1Level = 25 + (lamp_effective ? 400 : 0)
+#  The only way to the target (rank 3, 300 lux or more) is to switch on all
+#  three. AuxA and AuxB (lab:AuxUnitA, lab:AuxUnitB) can be switched and are
+#  part of the state, but never change the light. Sunshine has no effect and
+#  no state entry; every start situation sets it to 0.
+#
+#  Contents:
+#    - Brick structure: Zone1 (Workstation 1), CeilingLight_Z1
+#      (brick:Luminaire), SmartPlug_Z1, Breaker_Z1, AuxUnitA, AuxUnitB
+#      (brick:Equipment), LightSensor_Z1; the lamp feeds the sensor.
+#    - Power dependency (section 5b): Breaker_Z1 ws:powerGates SmartPlug_Z1
+#      and SmartPlug_Z1 ws:powerGates CeilingLight_Z1, each also stated as
+#      ws:poweredBy in the other direction (the program reads only
+#      ws:powerGates). The reasoner binds the "on" action of each gated device
+#      to the state entry of its direct gate: lamp on needs the plug on, plug
+#      on needs the breaker on (StereotypeReasoner.discoverPowerGates).
+#    - Elementary behaviour: LampIncandescentStereotype, SmartPlugStereotype
+#      and CircuitBreakerStereotype (each with illuminance as dependent
+#      variable and ws:behavioralDescriptionComplete true), the light sensor
+#      and the connection stereotype PrimaryOpticalCoupling. AuxUnitA has a
+#      partial stereotype (a manipulated variable, no dependent variable, no
+#      completeness marker); AuxUnitB has no stereotype. The reasoner
+#      therefore classifies both as UNKNOWN, never as EXPLICIT_OTHER_DV
+#      (open-world rule, docs/KNOWLEDGE_PROVENANCE.md). Direction is stated
+#      with elem:directProportion on the manipulated variables (layer 1).
+#    - Project terms (ws:): WoT action and state names, rank bounds, and the
+#      state layout [Z1Level, Z1Light, PlugZ1, Breaker, AuxA, AuxB]: 6
+#      entries, 4 x 2^5 = 128 states. Actions: 5 devices x on/off plus "do
+#      nothing" = 11.
+#  The brick knowledge layer reads only the Brick, SOSA/QUDT and WoT parts:
+#  no mechanism and no power gate (docs/ARCHITECTURE.md, section 5.4).
+# ===========================================================================
+
+
+# ===========================================================================
+# Property declarations (self-contained)
+# ===========================================================================
+
+brick:feeds   owl:equivalentProperty elem:feeds .
+sosa:observes owl:equivalentProperty elem:observes .
+
+# Qualitative direction (layer 1 of docs/KNOWLEDGE_PROVENANCE.md): the
+# manipulated variable is directly proportional to the named dependent
+# variable.
+elem:directProportion a owl:ObjectProperty ;
+    rdfs:label "direct qualitative proportionality (MV varies the DV in the same direction)" .
+
+# Completeness marker (layer 4, project extension). Open-world rule: without
+# the marker the relevance class is UNKNOWN, never "not relevant".
+ws:behavioralDescriptionComplete a owl:DatatypeProperty ;
+    rdfs:label "behavioral description is complete (all DVs of the component are listed)" ;
+    rdfs:range xsd:boolean .
+
+ws:zoneIndex a owl:DatatypeProperty ;
+    rdfs:label "Zone index" ; rdfs:range xsd:integer .
+
+ws:ivMinRank a owl:DatatypeProperty ;
+    rdfs:label "Minimum effective IV rank" ; rdfs:range xsd:integer .
+
+ws:actionValue a owl:DatatypeProperty ;
+    rdfs:label "Action boolean value" ; rdfs:range xsd:boolean .
+
+ws:rankBound_1 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_2 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_3 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+
+ws:hasWoTActionSemanticType a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:hasWoTStateSemanticType  a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:stateVecIndex   a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateDomainSize a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateSlotRole   a owl:DatatypeProperty ; rdfs:range xsd:string .
+
+# The two ends of a reified connection: a brick:feeds arc stated again as an
+# elem:InternalConnection that carries a connection stereotype (sections 4b
+# and 7b).
+ws:connSource a owl:ObjectProperty ; rdfs:label "connection source component" .
+ws:connTarget a owl:ObjectProperty ; rdfs:label "connection target component" .
+
+# --- Power-dependency properties --------------------------------------------
+# ws:powerGates: the subject device must be on for the object device to work.
+#                Used twice here, forming the chain breaker -> plug -> lamp.
+# ws:poweredBy:  the inverse; stated for each arc but not read by the program.
+ws:powerGates a owl:ObjectProperty ;
+    rdfs:label "powers / gates (electrical enable dependency)" .
+ws:poweredBy a owl:ObjectProperty ;
+    rdfs:label "powered by (receives electrical power through)" ;
+    owl:inverseOf ws:powerGates .
+
+
+# ===========================================================================
+# 1.  PHYSICAL MECHANISMS
+# ===========================================================================
+
+ws:pm_incandescent_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_incandescent_light_emission" ;
+    elem:hasManipulatedVariable ws:electrical_power_input ;
+    elem:hasDependentVariable   ws:luminiscence .
+
+# Smart plug: switched mains supply of the Z1 lamp. Its dependent variable is
+# the indoor illuminance (through the lamp it powers), so the reasoner's
+# enrichment query counts the plug as a device that lights zone 1. The
+# dependency itself is stated by ws:powerGates (section 5b).
+ws:pm_switched_power_supply a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_switched_power_supply (smart plug mains gate)" ;
+    elem:hasManipulatedVariable ws:plugPowerSwitch ;
+    elem:hasDependentVariable   ws:luminiscence .
+
+# Circuit breaker: switched feed one level above the plug. As for the plug,
+# its dependent variable is the indoor illuminance (through plug and lamp);
+# the chain itself is stated by the two ws:powerGates arcs (section 5b).
+ws:pm_breaker_circuit_feed a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_breaker_circuit_feed (circuit-breaker gate)" ;
+    elem:hasManipulatedVariable ws:breakerPowerSwitch ;
+    elem:hasDependentVariable   ws:luminiscence .
+
+# Decoy mechanism of AuxUnitA, partial on purpose: a manipulated variable but
+# no dependent variable. With the missing completeness marker on its
+# stereotype the relevance class of AuxUnitA is UNKNOWN (open-world rule).
+ws:pm_aux_unit_a_operation a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_aux_unit_a_operation (auxiliary unit A, effect undocumented)" ;
+    elem:hasManipulatedVariable ws:auxAControlInput .
+
+ws:illuminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Illuminance sensing" ;
+    elem:hasIndependentVariable ws:luminiscence ;
+    elem:hasDependentVariable   ws:sensedIlluminance .
+
+
+# ===========================================================================
+# 2.  PROCESS VARIABLES
+# ===========================================================================
+
+ws:electrical_power_input a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to light" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:luminiscence .
+
+ws:plugPowerSwitch a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Smart-plug mains switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:luminiscence .
+
+ws:breakerPowerSwitch a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Circuit-breaker switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:luminiscence .
+
+# Decoy manipulated variable: no elem:directProportion, as there is no
+# dependent variable to point at.
+ws:auxAControlInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Auxiliary unit A control input (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+ws:luminiscence a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Indoor illuminance level" ;
+    elem:dealsWithStuff  ws:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed indoor illuminance signal" ;
+    elem:dealsWithStuff  ws:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "100"^^xsd:decimal ;
+    ws:rankBound_3       "300"^^xsd:decimal .
+
+
+# ===========================================================================
+# 3.  PHYSICAL STUFF + STREAM KINDS
+# ===========================================================================
+
+ws:photons a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visible light (photons)" .
+
+ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Indoor lighting stream" .
+
+# Electrical supply stream kind of the chain breaker -> plug -> lamp.
+ws:ElectricalSupplyStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Switched electrical supply stream (breaker -> plug -> lamp)" .
+
+
+# ===========================================================================
+# 4.  COMPONENT STEREOTYPES
+# ===========================================================================
+
+ws:LampIncandescentStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Incandescent lamp stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_incandescent_light_emission ;
+    elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_light_photon_outlet ;
+    ws:behavioralDescriptionComplete "true"^^xsd:boolean .
+
+ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of incandescent lamp" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:electrical_power_input .
+
+ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Photon (light) outlet of incandescent lamp" ;
+    elem:dealsWithStuff        ws:photons ;
+    elem:isRelatedToVariable   ws:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+# --- Smart-plug stereotype ---------------------------------------------------
+ws:SmartPlugStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Smart plug (switched mains socket) stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_switched_power_supply ;
+    elem:hasConnectionPoint  ws:cp_plug_mains_inlet ;
+    elem:hasConnectionPoint  ws:cp_plug_switched_outlet ;
+    ws:behavioralDescriptionComplete "true"^^xsd:boolean .
+
+ws:cp_plug_mains_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Mains inlet of smart plug (fed by the circuit breaker)" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:plugPowerSwitch .
+
+ws:cp_plug_switched_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Switched electrical outlet of smart plug (feeds the lamp)" ;
+    elem:dealsWithStuff        elem:electrical_power ;
+    elem:isRelatedToVariable   ws:plugPowerSwitch ;
+    elem:suitableFor           ws:ElectricalSupplyStream .
+
+# --- Circuit-breaker stereotype ---------------------------------------------
+ws:CircuitBreakerStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Circuit breaker (lighting-circuit switch) stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_breaker_circuit_feed ;
+    elem:hasConnectionPoint  ws:cp_breaker_mains_inlet ;
+    elem:hasConnectionPoint  ws:cp_breaker_feed_outlet ;
+    ws:behavioralDescriptionComplete "true"^^xsd:boolean .
+
+ws:cp_breaker_mains_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Mains inlet of circuit breaker" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:breakerPowerSwitch .
+
+ws:cp_breaker_feed_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Circuit feed outlet of breaker (feeds the smart plug)" ;
+    elem:dealsWithStuff        elem:electrical_power ;
+    elem:isRelatedToVariable   ws:breakerPowerSwitch ;
+    elem:suitableFor           ws:ElectricalSupplyStream .
+
+# --- Decoy: partial stereotype of AuxUnitA ---------------------------------
+# Incomplete on purpose: its mechanism (section 1) has a manipulated but no
+# dependent variable, and the stereotype has no
+# ws:behavioralDescriptionComplete marker. Under the open-world rule the
+# reasoner does not conclude that the device is irrelevant: the class is
+# UNKNOWN.
+ws:AuxUnitAStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Auxiliary unit A stereotype (partial — effect undocumented)" ;
+    elem:hasPhysicalMechanism ws:pm_aux_unit_a_operation ;
+    elem:hasConnectionPoint  ws:cp_auxA_electrical_inlet .
+
+ws:cp_auxA_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of auxiliary unit A" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:auxAControlInput .
+
+ws:LightSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Indoor light sensor stereotype" ;
+    elem:hasPhysicalMechanism ws:illuminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_signal_outlet .
+
+ws:cp_lightsensor_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of indoor light sensor" ;
+    elem:dealsWithStuff      ws:photons ;
+    elem:isRelatedToVariable ws:luminiscence ;
+    elem:suitableFor         ws:IndoorLightingStream .
+
+ws:cp_lightsensor_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of indoor light sensor" ;
+    elem:dealsWithStuff      ws:photons ;
+    elem:isRelatedToVariable ws:sensedIlluminance .
+
+
+# ===========================================================================
+# 4b. CONNECTION (COUPLING) STEREOTYPES
+# ===========================================================================
+
+ws:pm_primary_illumination_transfer a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_primary_illumination_transfer (dominant same-zone, rank-moving)" ;
+    elem:hasDependentVariable ws:luminiscence .
+
+ws:PrimaryOpticalCoupling a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Primary optical coupling (dominant, rank-moving) connection stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_primary_illumination_transfer ;
+    elem:hasStreamKind        ws:IndoorLightingStream .
+
+
+# ===========================================================================
+# 5.  BUILDING TOPOLOGY (single workstation)
+# ===========================================================================
+
+lab:Workstation a owl:Class ;
+    rdfs:label "Workstation" ;
+    rdfs:subClassOf brick:Space .
+
+lab:Chain3Building a brick:Building ;
+    rdfs:label "Lab 4-Chain-3 (Depth-3 Power Dependency) Building" ;
+    brick:hasPart lab:Lab .
+
+lab:Lab a brick:Room ;
+    rdfs:label "Lab 4-Chain-3 room" ;
+    brick:hasPart lab:Zone1 .
+
+lab:Zone1 a lab:Workstation ;
+    rdfs:label "Workstation 1" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 1 .
+
+
+# ===========================================================================
+# 5b. POWER DEPENDENCY CHAIN  (depth 3, fully documented)
+# ---------------------------------------------------------------------------
+#  Level 1: the circuit breaker feeds the zone-1 lighting circuit; the smart
+#           plug has no power while the breaker is off.
+#  Level 2: the smart plug feeds the Z1 ceiling lamp; the lamp is dark while
+#           the plug is off, even with the breaker on.
+#  Net effect: the lamp gives light only when breaker, plug and lamp switch
+#  are all on (depth 3, counting the lamp's own switch). Each arc is stated
+#  in both directions (ws:powerGates and ws:poweredBy).
+# ===========================================================================
+
+lab:Breaker_Z1      ws:powerGates  lab:SmartPlug_Z1 .
+lab:SmartPlug_Z1    ws:poweredBy   lab:Breaker_Z1 .
+
+lab:SmartPlug_Z1    ws:powerGates  lab:CeilingLight_Z1 .
+lab:CeilingLight_Z1 ws:poweredBy   lab:SmartPlug_Z1 .
+
+
+# ===========================================================================
+# 6.  COMPONENT INSTANCES
+# ===========================================================================
+
+lab:Indoor_Illuminance_Sensor_Equipment a owl:Class ;
+    rdfs:label "Indoor illuminance sensor equipment" ;
+    rdfs:subClassOf brick:Sensor_Equipment .
+
+lab:CeilingLight_Z1 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Incandescent lamp – Workstation 1 (powered through plug + breaker)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    ws:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+# Smart plug in zone 1; gates the Z1 lamp, gated by the breaker (section 5b).
+lab:SmartPlug_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Smart plug – Workstation 1 (powers the Z1 lamp; fed by the breaker)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    ws:hasBehavioralStereotype ws:SmartPlugStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+# Circuit breaker of the zone-1 lighting circuit; gates the smart plug
+# (section 5b).
+lab:Breaker_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Circuit breaker – Workstation 1 lighting circuit (feeds the smart plug)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    ws:hasBehavioralStereotype ws:CircuitBreakerStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+# Decoy 1: auxiliary unit with a partial stereotype (no dependent variable,
+# no completeness marker). Part of the state and switchable; no effect on the
+# light.
+lab:AuxUnitA a brick:Equipment, elem:Actuator ;
+    rdfs:label "Auxiliary unit A – Workstation 1 (effect undocumented)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    ws:hasBehavioralStereotype ws:AuxUnitAStereotype .
+
+# Decoy 2: auxiliary unit without any stereotype (no
+# ws:hasBehavioralStereotype triple). Part of the state and switchable; no
+# effect on the light.
+lab:AuxUnitB a brick:Equipment, elem:Actuator ;
+    rdfs:label "Auxiliary unit B – Workstation 1 (undescribed)" ;
+    brick:isLocatedIn lab:Zone1 .
+
+lab:LightSensor_Z1 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    sosa:observes     lab:IndoorIlluminance_Z1 ;
+    ws:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:IndoorLightingStream a elem:Stream ;
+    rdfs:label "Indoor lighting process stream" ;
+    elem:hasStreamKind ws:IndoorLightingStream .
+
+lab:IndoorIlluminance_Z1 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 1" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+
+# ===========================================================================
+# 7.  TOPOLOGICAL CONNECTIONS  (same-zone primary only)
+# ===========================================================================
+
+# The lamp is the only device that lights the zone's sensor.
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z1 .
+
+
+# ---------------------------------------------------------------------------
+# 7b. REIFIED CONNECTIONS (coupling class per arc)
+# ---------------------------------------------------------------------------
+ws:conn_CLz1_to_LSz1 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Same-zone primary: CeilingLight_Z1 -> LightSensor_Z1 (+400 lux when effective)" ;
+    ws:connSource lab:CeilingLight_Z1 ; ws:connTarget lab:LightSensor_Z1 ;
+    ws:hasStructuralStereotype ws:PrimaryOpticalCoupling .
+
+
+# ===========================================================================
+# 8.  COMPONENT ACTIONS
+# ===========================================================================
+
+ws:SetZ1Light_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Light_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z1 elem:hasComponentAction ws:SetZ1Light_ON, ws:SetZ1Light_OFF .
+
+ws:SetPlugZ1_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetPlugZ1_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:SmartPlug_Z1 elem:hasComponentAction ws:SetPlugZ1_ON, ws:SetPlugZ1_OFF .
+
+ws:SetBreaker_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetBreaker_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Breaker_Z1 elem:hasComponentAction ws:SetBreaker_ON, ws:SetBreaker_OFF .
+
+ws:SetAuxA_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetAuxA_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:AuxUnitA elem:hasComponentAction ws:SetAuxA_ON, ws:SetAuxA_OFF .
+
+ws:SetAuxB_ON  a ws:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetAuxB_OFF a ws:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:AuxUnitB elem:hasComponentAction ws:SetAuxB_ON, ws:SetAuxB_OFF .
+
+
+# ===========================================================================
+# 9.  STATE VECTOR SLOT REGISTRY  (length 6)
+#  [Z1Level, Z1Light, PlugZ1, Breaker, AuxA, AuxB] = 4 x 2^5 = 128 states.
+#  The on/off entries (indices 1 to 5) are declared with the WoT mappings in
+#  section 10.
+# ===========================================================================
+
+lab:Slot_ZoneLevel_Z1
+    ws:stateVecIndex   0 ; ws:stateDomainSize 4 ; ws:stateSlotRole "zone_level" ; ws:zoneIndex 1 .
+
+
+# ===========================================================================
+# 10.  WoT ACTION / STATE MAPPINGS  (they define the action list of both arms)
+# ===========================================================================
+
+lab:CeilingLight_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Light" ;
+    ws:stateVecIndex            1 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:SmartPlug_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetPlugZ1" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#PlugZ1" ;
+    ws:stateVecIndex            2 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:Breaker_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetBreaker" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Breaker" ;
+    ws:stateVecIndex            3 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:AuxUnitA
+    ws:hasWoTActionSemanticType "http://example.org/was#SetAuxA" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#AuxA" ;
+    ws:stateVecIndex            4 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:AuxUnitB
+    ws:hasWoTActionSemanticType "http://example.org/was#SetAuxB" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#AuxB" ;
+    ws:stateVecIndex            5 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .

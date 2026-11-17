@@ -1,0 +1,127 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase1b_extended_v3",
+  "archive": "results/phase1b_extended_v3",
+  "role": "accepted",
+  "phase": "1b",
+  "description": "Phase 1b extended-arm re-execution campaign (v3): two seed-half runs compared against the frozen arm of phase1b_corrected.",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase1.yml",
+    "all_runs": {
+      "head_sha": "77e7791f42b597e93acd511dc57f0fbd06c58a0a",
+      "profiles": [
+        "labrel0",
+        "labrel4",
+        "labrel8",
+        "labrel16",
+        "labrel8s",
+        "labband",
+        "lab4chain3"
+      ],
+      "publish_results": true,
+      "ref": "refs/heads/round3-rerun-2026-11",
+      "run_mode": "phase1b_v2_extended",
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "43099281565": {
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "43099286057": {
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      }
+    }
+  },
+  "tables": [
+    {
+      "file": "analysis/registered/phase1b_extended_v3_registered_family.csv",
+      "key": [
+        "member"
+      ],
+      "rows": [
+        "M2",
+        "M4",
+        "M5"
+      ],
+      "all_rows": {
+        "n_paired": "20"
+      },
+      "row_values": {
+        "M2": {
+          "mean_paired_statistic": {
+            "float": 0.0
+          },
+          "p_signflip_two_sided": {
+            "float": 1.0
+          },
+          "bh_family_m": "2",
+          "q_signflip_bh": {
+            "float": 1.0
+          }
+        },
+        "M4": {
+          "mean_paired_statistic": {
+            "float": -0.00025000000000000575
+          },
+          "p_signflip_two_sided": {
+            "float": 0.09033203125
+          },
+          "bh_family_m": "2",
+          "q_signflip_bh": {
+            "float": 0.1806640625
+          }
+        },
+        "M5": {
+          "mean_paired_statistic": {
+            "float": -0.26625
+          },
+          "p_signflip_two_sided": {
+            "float": 0.02381134033203125
+          },
+          "bh_family_m": "exploratory"
+        }
+      }
+    }
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "run_*/SHA256SUMS.csv",
+        "base": "."
+      },
+      {
+        "glob": "run_*/analysis/out/SHA256SUMS.csv",
+        "base": "../.."
+      }
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase1b_extended_v3.py",
+      "{archive}",
+      "--comparator",
+      "{results}/phase1b_corrected"
+    ],
+    "data": "local",
+    "requires": [
+      "{archive}/run_*/benchmark/results_seed*/*/training_stereo_*/qtable_*.csv",
+      "{results}/phase1b_corrected/run_*/benchmark/results_seed*/*/training_stereo_*/qtable_*.csv"
+    ],
+    "approx_seconds": 280,
+    "note": "Needs the ignored per-cell files of this archive and of phase1b_corrected."
+  }
+}

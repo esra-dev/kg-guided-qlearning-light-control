@@ -1,0 +1,35 @@
+/*
+  KG-QL: Benchmark Agent
+
+  JaCaMo project file for the Gradle task "taskBench".
+
+  Starts one BDI agent, illuminance_controller_agent_bench
+  (src/agt/illuminance_controller_agent_bench.asl). It runs the benchmark
+  scenarios of the selected lab profile with one control mode and writes one
+  result file, benchmark_results_<mode>.csv.
+
+  To run: ./gradlew taskBench -Pmode=<mode>
+          (while the Node-RED simulator flow of that profile is running; the
+          port of each lab is the sim_port in src/agt/lab_profiles.asl)
+
+  Options:
+    -Pmode=rule_based | ql_false | ql_true
+        rule_based  fixed hand-written control rules, no learning
+        ql_false    greedy policy from the Q-table trained without knowledge
+        ql_true     greedy policy from the Q-table trained with the knowledge graph
+        The value is passed as the system property bench.mode and replaces the
+        default of the bench_mode belief in the agent program.
+    The lab profile is the active_profile belief of the agent program; the
+    run_full_project.ps1 script sets it for each lab. The agent also reads the
+    system property active.profile, which the Gradle task does not set.
+
+  For ql_false and ql_true the Q-table files written by the training run
+  (task_ql.jcm) must exist, e.g. qtable_final_stereotypes_true.csv and
+  qtable_final_stereotypes_false.csv. Run once per mode.
+*/
+
+mas lab_bench {
+
+    agent illuminance_controller_agent_bench
+
+}

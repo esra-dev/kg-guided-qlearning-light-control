@@ -1,0 +1,19 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase1b_pilot",
+  "archive": "results/exploratory/phase1b_pilot",
+  "role": "exploratory",
+  "phase": "1b",
+  "description": "Phase 1b pilot runs (not confirmatory): markers, diagnostics and power inputs.",
+  "required_files": [
+    "power_inputs.csv",
+    "power_report.txt",
+    "diagnostics/phase1b_pilot_diagnostics.csv",
+    "run_30171111962/PILOT_ONLY.json",
+    "run_30171112970/PILOT_ONLY.json",
+    "run_30171113750/PILOT_ONLY.json",
+    "run_30171114580/PILOT_ONLY.json"
+  ],
+  "reproducer": null,
+  "reproducer_note": "The raw pilot artifacts (about 4.2 GB) are not in the repository."
+}

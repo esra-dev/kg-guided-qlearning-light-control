@@ -1,0 +1,135 @@
+@prefix td:     <https://www.w3.org/2019/wot/td#> .
+@prefix hctl:   <https://www.w3.org/2019/wot/hypermedia#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix eve:    <http://w3id.org/eve#> .
+@prefix wotsec: <https://www.w3.org/2019/wot/security#> .
+@prefix js:     <https://www.w3.org/2019/wot/json-schema#> .
+@prefix htv:    <http://www.w3.org/2011/http#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+# ============================================================================
+#  Thing Description (W3C Web of Things) of the lab labrel4: profile
+#  "labrel4" in src/agt/lab_profiles.asl, Phase 1b relevance ladder, rung with 4 decoy devices.
+#  Simulator flow simulator/simulator_flow_labrel4.json, port 1905.
+#
+#  LabEnvironment reads this file through the profile's td(...) entry. The
+#  property "Status" (GET /was/rl/status) returns the readings listed below;
+#  each action is sent as JSON to POST /was/rl/action.
+#
+#  Room: one zone; the lamp is the only device that changes the light:
+#      Z1Level = 25 + (Z1Light ? 400 : 0)
+#  Decoys (switchable, no effect on the light, 1 energy unit per tick each
+#  while on): Fan, Humidifier, Heater, Speaker.
+#  The knowledge graph building_10_labrel4.ttl gives the decoys no state
+#  name, so their switch positions in Status are not part of the
+#  learner's state (8 states: Z1Level x Z1Light).
+#  Sunshine is readable but has no effect on the light; every start
+#  situation of this lab sets it to 0.
+# ============================================================================
+
+<urn:kg-ql:interactions-labrel4> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
+
+    td:title "The lab of the Interactions team – Relevance Ladder labrel4" ;
+    td:hasSecurityConfiguration [ a wotsec:NoSecurityScheme ] ;
+    td:hasBase <http://localhost:1905/was/rl/> ;
+
+    td:hasPropertyAffordance [
+        a td:PropertyAffordance, <https://example.org/was#Status>, js:ObjectSchema ;
+        td:name "Status" ;
+        dct:title "Read the lab status" ;
+        td:hasForm [
+            htv:methodName "GET" ;
+            hctl:hasTarget <http://localhost:1905/was/rl/status> ;
+            hctl:forContentType "application/json" ;
+            hctl:hasOperationType td:readProperty
+        ] ;
+        td:isObservable false ;
+        js:properties
+            [ a js:NumberSchema, <http://example.org/was#Z1Level> ;
+              js:propertyName "Z1Level" ],
+            [ a js:BooleanSchema, <http://example.org/was#Z1Light> ;
+              js:propertyName "Z1Light" ],
+            [ a js:BooleanSchema, <http://example.org/was#Fan> ;
+              js:propertyName "Fan" ],
+            [ a js:BooleanSchema, <http://example.org/was#Humidifier> ;
+              js:propertyName "Humidifier" ],
+            [ a js:BooleanSchema, <http://example.org/was#Heater> ;
+              js:propertyName "Heater" ],
+            [ a js:BooleanSchema, <http://example.org/was#Speaker> ;
+              js:propertyName "Speaker" ],
+            [ a js:NumberSchema, <http://example.org/was#Sunshine> ;
+              js:propertyName "Sunshine" ],
+            [ a js:NumberSchema, <http://example.org/was#EnergyCost> ;
+              js:propertyName "EnergyCost" ],
+            [ a js:NumberSchema, <http://example.org/was#TotalEnergyCost> ;
+              js:propertyName "TotalEnergyCost" ],
+            [ a js:NumberSchema, <http://example.org/was#Hour> ;
+              js:propertyName "Hour" ]
+    ] ;
+
+    td:hasActionAffordance
+        [ a td:ActionAffordance, <http://example.org/was#SetZ1Light> ;
+          td:name "Control Lights Z1" ;
+          dct:title "Turn on and off the lights in Z1 (the only light-affecting actuator)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1905/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Z1Light" ]
+          ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetFan> ;
+          td:name "Control Fan" ;
+          dct:title "Turn on and off the fan in Z1 (no effect on illuminance)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1905/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Fan" ]
+          ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetHumidifier> ;
+          td:name "Control Humidifier" ;
+          dct:title "Turn on and off the humidifier in Z1 (no effect on illuminance)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1905/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Humidifier" ]
+          ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetHeater> ;
+          td:name "Control Heater" ;
+          dct:title "Turn on and off the heater in Z1 (no effect on illuminance)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1905/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Heater" ]
+          ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetSpeaker> ;
+          td:name "Control Speaker" ;
+          dct:title "Turn on and off the speaker in Z1 (no effect on illuminance)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1905/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Speaker" ]
+          ]
+        ] .

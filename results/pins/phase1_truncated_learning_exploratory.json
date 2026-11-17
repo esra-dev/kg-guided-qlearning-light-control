@@ -1,0 +1,25 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase1_truncated_learning_exploratory",
+  "archive": "results/exploratory/phase1_truncated_learning_exploratory",
+  "role": "exploratory",
+  "phase": "1",
+  "description": "Exploratory truncated-learning sensitivity analysis of Phase 1 and Phase 1b.",
+  "required_files": [
+    "analysis/analysis_metadata.json",
+    "analysis/input_file_manifest.csv"
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "analysis/SHA256SUMS.csv",
+        "base": "."
+      }
+    ],
+    "lf_committed": [
+      "analysis/analysis_metadata.json"
+    ]
+  },
+  "reproducer": null,
+  "reproducer_note": "analysis/phase1_truncated_learning.py needs the ignored inputs in .phase1b_truncation_inputs/ (scripts/download_phase1b_truncation_inputs.ps1); local only."
+}

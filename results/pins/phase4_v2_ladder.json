@@ -1,0 +1,182 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase4_v2_ladder",
+  "archive": "results/phase4_v2_ladder",
+  "role": "accepted",
+  "phase": "4",
+  "description": "Phase 4 knowledge-ladder control campaign: Brick-only and redundancy-only arms in four seed-half runs, compared against phase4_v2_corrected.",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase4.yml",
+    "workflow_note": "Every archived workflow_inputs.json of this campaign records \".github/workflows/phase1.yml\", although the runs were dispatched through workflow_actual (named in each run's ARCHIVE_MANIFEST.md). The receipt value is pinned as it is.",
+    "all_runs": {
+      "head_sha": "ee656178dc3528d56b69a7123c1a37ed43919936",
+      "publish_results": true,
+      "ref": "refs/heads/phase4-knowledge-ladder-2026-11",
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "43494914019": {
+        "profiles": [
+          "lab4",
+          "lab4dual",
+          "lab4chain",
+          "lab5"
+        ],
+        "run_mode": "phase4_v2_brick_only",
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "43494933613": {
+        "profiles": [
+          "lab4",
+          "lab4dual",
+          "lab4chain",
+          "lab5"
+        ],
+        "run_mode": "phase4_v2_brick_only",
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      },
+      "43494955158": {
+        "profiles": [
+          "lab4",
+          "lab4dual",
+          "lab4chain"
+        ],
+        "run_mode": "phase4_v2_redundancy_only",
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "43494975441": {
+        "profiles": [
+          "lab4",
+          "lab4dual",
+          "lab4chain"
+        ],
+        "run_mode": "phase4_v2_redundancy_only",
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      }
+    }
+  },
+  "tables": [
+    {
+      "file": "analysis/registered/phase4_v2_knowledge_ladder_family.csv",
+      "key": [
+        "registered_test"
+      ],
+      "rows": [
+        "A3_minus_A1_lab4_avg_redundant",
+        "A3_minus_A1_lab4dual_avg_redundant",
+        "A3_minus_A1_lab4chain_avg_redundant",
+        "A3_minus_A2_lab4_avg_redundant",
+        "A3_minus_A2_lab4dual_avg_redundant",
+        "A3_minus_A2_lab4chain_avg_redundant",
+        "A3_minus_A2_lab5_energy_compliance"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "A3_minus_A1_lab4_avg_redundant": {
+          "mean_increment": {
+            "float": -0.305
+          },
+          "registered_category": "adds",
+          "bh_family_m": "3"
+        },
+        "A3_minus_A1_lab4dual_avg_redundant": {
+          "mean_increment": {
+            "float": -0.4525
+          },
+          "registered_category": "adds",
+          "bh_family_m": "3"
+        },
+        "A3_minus_A1_lab4chain_avg_redundant": {
+          "mean_increment": {
+            "float": -0.29562499999999997
+          },
+          "registered_category": "adds",
+          "bh_family_m": "3"
+        },
+        "A3_minus_A2_lab4_avg_redundant": {
+          "mean_increment": {
+            "float": -0.040625
+          },
+          "registered_category": "adds",
+          "bh_family_m": "3"
+        },
+        "A3_minus_A2_lab4dual_avg_redundant": {
+          "mean_increment": {
+            "float": -0.05375
+          },
+          "registered_category": "adds",
+          "bh_family_m": "3"
+        },
+        "A3_minus_A2_lab4chain_avg_redundant": {
+          "mean_increment": {
+            "float": -0.015625
+          },
+          "registered_category": "null",
+          "bh_family_m": "3"
+        },
+        "A3_minus_A2_lab5_energy_compliance": {
+          "mean_increment": {
+            "float": 0.075
+          },
+          "registered_category": "adds",
+          "bh_family_m": "1"
+        }
+      }
+    }
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "run_*/SHA256SUMS.csv",
+        "base": "."
+      }
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase4_v2_ladder.py",
+      "{archive}",
+      "--full-root",
+      "{results}/phase4_v2_corrected"
+    ],
+    "data": "local",
+    "requires": [
+      "{archive}/run_*/benchmark/results_seed*/*/training_stereo_*/qtable_*.csv",
+      "{results}/phase4_v2_corrected/run_*/benchmark/results_seed*/*/training_stereo_*/qtable_*.csv"
+    ],
+    "approx_seconds": 70,
+    "note": "Needs the ignored benchmark and Q-table files of this archive and of phase4_v2_corrected (about 1.9 GB together)."
+  }
+}

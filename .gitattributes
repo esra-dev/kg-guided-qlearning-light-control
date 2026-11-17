@@ -1,0 +1,45 @@
+# Default for every file: check it out exactly as it is committed, on every
+# platform and with every core.autocrlf setting. Receipts store SHA-256
+# checksums of input files (for example scenario_file_sha256 of the files in
+# benchmark/), the reproducers compare those checksums with the checked-out
+# files, and the archives were produced on Linux. A Windows checkout that turned
+# LF into CRLF would therefore fail these checks and write different checksums.
+# The more specific rules below refine this default.
+* -text
+
+# Canonical source/document line endings. Archive exceptions below take
+# precedence and remain byte-preserved.
+.gitattributes text eol=lf
+.gitignore text eol=lf
+*.asl text eol=lf
+*.java text eol=lf
+*.md text eol=lf
+*.ps1 text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+config/*.json text eol=lf
+simulator/*.json text eol=lf
+docs/evidence/*.csv text eol=lf
+docs/evidence/*.json text eol=lf
+
+# Preserve archived experiment artifacts byte-for-byte on every platform.
+# Their committed SHA-256 inventories describe the downloaded bytes, so Git
+# must not perform line-ending conversion inside these evidence directories.
+# results/ holds every accepted and exploratory campaign archive.
+results/** -text -whitespace !eol
+# The pins files and the index page under results/ are ordinary text files.
+results/pins/*.json text eol=lf
+results/README.md text eol=lf
+
+# Byte-frozen derived artifacts: the dashboard JSONs are byte-compared against
+# their builder's output (analysis/tests/test_dashboard_phase1_builder.py),
+# and the builder writes LF. Pin eol so every platform/autocrlf setting
+# materialises exactly the builder's bytes.
+dashboard/public/data/*.json text eol=lf
+
+# Golden action registries: written by Java (platform newline) but their
+# committed form is canonical LF; RegistryGoldenCheck reads by line, so
+# normalisation is behaviour-neutral.
+config/golden_registry/*.csv text eol=lf
+

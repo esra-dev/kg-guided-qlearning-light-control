@@ -1,0 +1,109 @@
+{
+  "protocol_version": "phase1-v2",
+  "run_mode": "phase4_v2",
+  "status": "current thesis evidence",
+  "runs": {
+    "seeds_1_10": 29926341581,
+    "seeds_11_20": 29926354783
+  },
+  "head_sha": "90e53f8b087fc390a7ad51a0187b81c89c21c64e",
+  "registered_family": [
+    {
+      "name": "lab4 avg_redundant",
+      "cell": "lab4",
+      "metric": "avg_redundant",
+      "mean_ql_true": 0.8875,
+      "mean_ql_false": 1.5825,
+      "mean": -0.6950000000000001,
+      "ci_lo": -0.985625,
+      "ci_hi": -0.4375,
+      "p": 3.814697265625e-06,
+      "q": 5.086263020833333e-06,
+      "rank_biserial": -0.9904761904761905,
+      "verdict": "supported"
+    },
+    {
+      "name": "lab4dual avg_redundant",
+      "cell": "lab4dual",
+      "metric": "avg_redundant",
+      "mean_ql_true": 1.131875,
+      "mean_ql_false": 1.876875,
+      "mean": -0.745,
+      "ci_lo": -0.9737500000000001,
+      "ci_hi": -0.531875,
+      "p": 3.814697265625e-06,
+      "q": 5.086263020833333e-06,
+      "rank_biserial": -0.9904761904761905,
+      "verdict": "supported"
+    },
+    {
+      "name": "lab4chain avg_redundant",
+      "cell": "lab4chain",
+      "metric": "avg_redundant",
+      "mean_ql_true": 0.934375,
+      "mean_ql_false": 1.66875,
+      "mean": -0.734375,
+      "ci_lo": -0.885,
+      "ci_hi": -0.585,
+      "p": 1.9073486328125e-06,
+      "q": 5.086263020833333e-06,
+      "rank_biserial": -1.0,
+      "verdict": "supported"
+    },
+    {
+      "name": "lab5 energy_compliance",
+      "cell": "lab5",
+      "metric": "energy_compliance",
+      "mean_ql_true": 0.503125,
+      "mean_ql_false": 0.45999999999999996,
+      "archived_mean_ql_true": 0.753125,
+      "archived_mean_ql_false": 0.71,
+      "mean": 0.043125000000000004,
+      "ci_lo": 0.01437500000000001,
+      "ci_hi": 0.07062500000000001,
+      "p": 0.0093994140625,
+      "q": 0.0093994140625,
+      "rank_biserial": 0.6833333333333333,
+      "verdict": "supported"
+    }
+  ],
+  "lab5_levels": {
+    "ql_true": 0.503125,
+    "ql_false": 0.45999999999999996,
+    "rule_based": 0.75,
+    "archived_ql_true": 0.753125,
+    "archived_ql_false": 0.71,
+    "archived_rule_based": 1.0,
+    "n_seeds": 20,
+    "n_test_runs_per_arm": 1600,
+    "n_zero_step_runs_per_arm": 900,
+    "source": "results/_corrected_tables/phase4_v2_corrected/lab5_compliance_levels.csv"
+  },
+  "ladder_trend": [
+    {
+      "contrast": "lab4chain_minus_lab4",
+      "role": "registered_ordered_secondary",
+      "mean": -0.03937500000000001,
+      "ci_lo": -0.358125,
+      "ci_hi": 0.28812499999999996,
+      "p": 0.8234596252441406
+    },
+    {
+      "contrast": "lab4dual_minus_lab4",
+      "role": "descriptive",
+      "mean": -0.05,
+      "ci_lo": -0.43062500000000004,
+      "ci_hi": 0.3425000000000001,
+      "p": 0.8078632354736328
+    },
+    {
+      "contrast": "lab4chain_minus_lab4dual",
+      "role": "descriptive",
+      "mean": 0.010624999999999996,
+      "ci_lo": -0.23937500000000003,
+      "ci_hi": 0.28812499999999996,
+      "p": 0.9428291320800781
+    }
+  ],
+  "source": "results/phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv"
+}

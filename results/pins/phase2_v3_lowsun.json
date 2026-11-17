@@ -1,0 +1,130 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase2_v3_lowsun",
+  "archive": "results/phase2_v3_lowsun",
+  "role": "accepted",
+  "phase": "2",
+  "description": "Phase 2 low-sun re-execution campaign (v3): the two low-sun fault cells with delivered low-sun treatment.",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase2.yml",
+    "workflow_note": "Every archived workflow_inputs.json of this campaign records \".github/workflows/phase1.yml\", although the runs were dispatched through workflow_actual (named in each run's ARCHIVE_MANIFEST.md). The receipt value is pinned as it is.",
+    "all_runs": {
+      "head_sha": "77e7791f42b597e93acd511dc57f0fbd06c58a0a",
+      "profiles": [
+        "lab3_f2dead_lowsun",
+        "labmon2_f2dead_lowsun"
+      ],
+      "publish_results": true,
+      "ref": "refs/heads/round3-rerun-2026-11",
+      "run_mode": "phase1_v2_kg_only",
+      "seeds": {
+        "int_range": [
+          1,
+          20
+        ]
+      },
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "43099277363": {}
+    }
+  },
+  "tables": [
+    {
+      "file": "analysis/registered/phase2_lowsun_v3_recovery_family.csv",
+      "key": [
+        "registered_cell"
+      ],
+      "rows": [
+        "lab3_f2dead_lowsun",
+        "labmon2_f2dead_lowsun"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "bh_family_m": "2",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m2": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "lab3_f2dead_lowsun": {
+          "mean_paired_difference": {
+            "float": 2153.0
+          },
+          "q_signflip_bh_m2": {
+            "float": 0.001953125
+          }
+        },
+        "labmon2_f2dead_lowsun": {
+          "mean_paired_difference": {
+            "float": 1087.8
+          },
+          "q_signflip_bh_m2": {
+            "float": 0.031244277954101562
+          }
+        }
+      }
+    },
+    {
+      "file": "analysis/registered/phase2_lowsun_v3_detection_family.csv",
+      "key": [
+        "registered_cell"
+      ],
+      "rows": [
+        "lab3_f2dead_lowsun",
+        "labmon2_f2dead_lowsun"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "bh_family_m": "2",
+        "p_signflip_two_sided": {
+          "probability": true
+        },
+        "q_signflip_bh_m2": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "lab3_f2dead_lowsun": {
+          "mean_paired_difference": {
+            "float": 2200.55
+          },
+          "q_signflip_bh_m2": {
+            "float": 0.001953125
+          }
+        },
+        "labmon2_f2dead_lowsun": {
+          "mean_paired_difference": {
+            "float": 1199.95
+          },
+          "q_signflip_bh_m2": {
+            "float": 0.03125
+          }
+        }
+      }
+    }
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "run_*/SHA256SUMS.csv",
+        "base": "."
+      }
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase2_lowsun_v3.py",
+      "{archive}"
+    ],
+    "data": "tracked",
+    "approx_seconds": 2
+  }
+}

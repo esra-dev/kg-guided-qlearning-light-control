@@ -1,0 +1,13 @@
+arm,mode,zero_step_scoring,n_seeds,n_test_runs,n_zero_step_runs,goal_rate_mean,energy_compliance_mean,mean_steady_power_mean,over_budget_rate_mean
+A3_full_kg,ql_true,declared_start_state,20,1600,900,0.98125,0.503125,3.3375,0.48708333333333337
+A3_full_kg,ql_true,all_off_legacy,20,1600,900,0.98125,0.753125,1.15,0.23208333333333334
+A3_full_kg,ql_false,declared_start_state,20,1600,900,0.99,0.45999999999999996,3.7674999999999996,0.5351318565400843
+A3_full_kg,ql_false,all_off_legacy,20,1600,900,0.99,0.71,1.58,0.2824736286919831
+A3_full_kg,rule_based,declared_start_state,20,1600,900,1.0,0.75,3.0625,0.25
+A3_full_kg,rule_based,all_off_legacy,20,1600,900,1.0,1.0,0.875,0.0
+A2_brick,ql_true,declared_start_state,20,1600,900,0.9675,0.428125,3.8975,0.5571606746573435
+A2_brick,ql_true,all_off_legacy,20,1600,900,0.9675,0.678125,1.7100000000000002,0.29858459273349347
+A2_brick,ql_false,declared_start_state,20,1600,900,0.99,0.45999999999999996,3.7674999999999996,0.5351318565400843
+A2_brick,ql_false,all_off_legacy,20,1600,900,0.99,0.71,1.58,0.2824736286919831
+A2_brick,rule_based,declared_start_state,20,1600,900,1.0,0.75,3.0625,0.25
+A2_brick,rule_based,all_off_legacy,20,1600,900,1.0,1.0,0.875,0.0

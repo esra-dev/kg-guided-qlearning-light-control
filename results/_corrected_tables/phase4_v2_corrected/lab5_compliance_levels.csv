@@ -1,0 +1,7 @@
+arm,mode,zero_step_scoring,n_seeds,n_test_runs,n_zero_step_runs,goal_rate_mean,energy_compliance_mean,mean_steady_power_mean,over_budget_rate_mean
+full_kg,ql_true,declared_start_state,20,1600,900,0.98125,0.503125,3.3375,0.48708333333333337
+full_kg,ql_true,all_off_legacy,20,1600,900,0.98125,0.753125,1.15,0.23208333333333334
+full_kg,ql_false,declared_start_state,20,1600,900,0.99,0.45999999999999996,3.7674999999999996,0.5351318565400843
+full_kg,ql_false,all_off_legacy,20,1600,900,0.99,0.71,1.58,0.2824736286919831
+full_kg,rule_based,declared_start_state,20,1600,900,1.0,0.75,3.0625,0.25
+full_kg,rule_based,all_off_legacy,20,1600,900,1.0,1.0,0.875,0.0

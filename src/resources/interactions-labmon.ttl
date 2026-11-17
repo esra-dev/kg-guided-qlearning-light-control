@@ -1,0 +1,88 @@
+@prefix td:     <https://www.w3.org/2019/wot/td#> .
+@prefix hctl:   <https://www.w3.org/2019/wot/hypermedia#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix eve:    <http://w3id.org/eve#> .
+@prefix wotsec: <https://www.w3.org/2019/wot/security#> .
+@prefix js:     <https://www.w3.org/2019/wot/json-schema#> .
+@prefix htv:    <http://www.w3.org/2011/http#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+# ============================================================================
+#  Web of Things Thing Description of the monitor lab (flow
+#  simulator/simulator_flow_labmon.json and its fault copy
+#  simulator_flow_labmon_f1dead.json), base URL http://localhost:1899/was/rl/.
+#  Named by td(...) in the profiles labmon, labmon_f1dead, labmon_infoonly,
+#  labmon_infoonly_f1dead, labmon_nostereo and labmon_nostereo_f1dead
+#  (src/agt/lab_profiles.asl). LabEnvironment reads it for the status and
+#  action requests; the /setState and /reset URLs are derived from them.
+#  - Property "Status" (GET status): Z1Level (lux), the switch positions
+#    Z1Light and Z1Monitor, and Sunshine, EnergyCost, TotalEnergyCost and
+#    Hour. The flow reports a Sunshine value, but in this lab the sun has no
+#    effect on the light, and the knowledge graphs give the agent no sun
+#    entry in its state.
+#  - Actions (POST action): SetZ1Light (the task lamp) and SetZ1Monitor (the
+#    computer monitor, whose light is a side effect), each a boolean.
+#  No blinds, no spotlight.
+# ============================================================================
+
+<urn:kg-ql:interactions-labmon> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
+
+    td:title "The lab of the Interactions team – Monitor Emergency Fallback" ;
+    td:hasSecurityConfiguration [ a wotsec:NoSecurityScheme ] ;
+    td:hasBase <http://localhost:1899/was/rl/> ;
+
+    td:hasPropertyAffordance [
+        a td:PropertyAffordance, <https://example.org/was#Status>, js:ObjectSchema ;
+        td:name "Status" ;
+        dct:title "Read the lab status" ;
+        td:hasForm [
+            htv:methodName "GET" ;
+            hctl:hasTarget <http://localhost:1899/was/rl/status> ;
+            hctl:forContentType "application/json" ;
+            hctl:hasOperationType td:readProperty
+        ] ;
+        td:isObservable false ;
+        js:properties
+            [ a js:NumberSchema, <http://example.org/was#Z1Level> ;
+              js:propertyName "Z1Level" ],
+            [ a js:BooleanSchema, <http://example.org/was#Z1Light> ;
+              js:propertyName "Z1Light" ],
+            [ a js:BooleanSchema, <http://example.org/was#Z1Monitor> ;
+              js:propertyName "Z1Monitor" ],
+            [ a js:NumberSchema, <http://example.org/was#Sunshine> ;
+              js:propertyName "Sunshine" ],
+            [ a js:NumberSchema, <http://example.org/was#TotalEnergyCost> ;
+              js:propertyName "TotalEnergyCost" ],
+            [ a js:NumberSchema, <http://example.org/was#EnergyCost> ;
+              js:propertyName "EnergyCost" ],
+            [ a js:NumberSchema, <http://example.org/was#Hour> ;
+              js:propertyName "Hour" ]
+    ] ;
+
+    td:hasActionAffordance
+        [ a td:ActionAffordance, <http://example.org/was#SetZ1Light> ;
+          td:name "Control Lights Z1" ;
+          dct:title "Turn on and off the primary task lamp in Z1" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1899/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Z1Light" ]
+          ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ1Monitor> ;
+          td:name "Control Monitor Z1" ;
+          dct:title "Turn on and off the computer monitor in Z1 (light is a side-effect)" ;
+          td:hasForm [
+              htv:methodName "POST" ;
+              hctl:hasTarget <http://localhost:1899/was/rl/action> ;
+              hctl:forContentType "application/json" ;
+              hctl:hasOperationType td:invokeAction
+          ] ;
+          td:hasInputSchema [ a js:ObjectSchema ;
+              js:properties [ a js:BooleanSchema ; js:propertyName "Z1Monitor" ]
+          ]
+        ] .

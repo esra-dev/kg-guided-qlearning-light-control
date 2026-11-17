@@ -1,0 +1,78 @@
+{
+  "phase1": {
+    "lab2_auc_goal_gain": 0.0036999999999999976,
+    "lab2_auc_goal_q": 9.5367431640625e-06,
+    "lab2_auc_goal_verdict": "supported",
+    "redundancy_share": 0.6981981981981937,
+    "n_seeds": 20,
+    "source": "phase1.json: registered_family (Arm-C lab2 auc_goal), decomposition"
+  },
+  "phase2": {
+    "n_cells": 8,
+    "n_supported": 2,
+    "n_null": 3,
+    "n_adverse": 3,
+    "n_seeds": 20,
+    "adverse_cells_knowledge_arm_never_detected": 3,
+    "source": "phase2.json: tier1 (verdict, censored_ql_true)"
+  },
+  "phase3": {
+    "ground_truth_ticks": 12.0,
+    "learned_ticks_min": 12.125,
+    "learned_ticks_max": 12.1875,
+    "deadlines": {
+      "lab2_slow": {
+        "knowledge_arm": {
+          "met": 59,
+          "total": 60
+        },
+        "plain_arm": {
+          "met": 30,
+          "total": 60
+        }
+      },
+      "lab3_slow": {
+        "knowledge_arm": {
+          "met": 60,
+          "total": 60
+        },
+        "plain_arm": {
+          "met": 30,
+          "total": 60
+        }
+      }
+    },
+    "source": "phase3.json: delay (slowest_learned_ticks), compliance (overall_compliance_mean)"
+  },
+  "phase4": {
+    "steps_per_test_run": {
+      "lab4": {
+        "knowledge_arm": 0.8875,
+        "plain_arm": 1.5825,
+        "reduction_pct": 43.91785150078989,
+        "q": 5.086263020833333e-06
+      },
+      "lab4dual": {
+        "knowledge_arm": 1.131875,
+        "plain_arm": 1.876875,
+        "reduction_pct": 39.6936396936397,
+        "q": 5.086263020833333e-06
+      },
+      "lab4chain": {
+        "knowledge_arm": 0.934375,
+        "plain_arm": 1.66875,
+        "reduction_pct": 44.00749063670412,
+        "q": 5.086263020833333e-06
+      }
+    },
+    "lab5": {
+      "knowledge_arm": 0.503125,
+      "plain_arm": 0.45999999999999996,
+      "hand_written": 0.75,
+      "paired_difference": 0.043125000000000004,
+      "q": 0.0093994140625,
+      "n_seeds": 20
+    },
+    "source": "phase4.json: registered_family (mean_ql_true, mean_ql_false), lab5_levels"
+  }
+}

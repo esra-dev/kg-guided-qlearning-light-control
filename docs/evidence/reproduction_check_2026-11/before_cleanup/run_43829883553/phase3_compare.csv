@@ -1,0 +1,85 @@
+cell,profile,mode,rep,goal,deadline_sec,run_chosen,arch_rep_chosen,run_met,arch_rep_met,run_learned_delay_sec,arch_rep_learned_delay_sec,run_actual_delay_sec,arch_rep_actual_delay_sec,arch_all_reps_choices,choice_equal,choice_in_archive_spread,met_equal,learned_delay_equal
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,g1,15.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,61.25,62.50,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,g2,45.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,61.25,62.50,65.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,g3,90.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,61.25,62.50,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,g4,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,61.25,62.50,60.00,65.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,g5,15.00,SetZ2Blinds=ON,SetZ2Blinds=ON,0,0,60.00,61.25,60.00,60.00,SetZ2Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,g6,300.00,SetZ2Blinds=ON,SetZ2Blinds=ON,1,1,60.00,61.25,60.00,65.00,SetZ2Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,DELAY:SetZ1Blinds=ON,,delayed,delayed,,,61.2500,62.5000,,,,1,,,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,DELAY:SetZ1Light=ON,,instantaneous,instantaneous,,,5.0000,5.6250,,,,1,,,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,DELAY:SetZ2Blinds=ON,,delayed,delayed,,,60.0000,61.2500,,,,1,,,0
+dynamics-lab2_slow-ql_false-rep-1,lab2_slow,ql_false,1,DELAY:SetZ2Light=ON,,instantaneous,instantaneous,,,5.6250,5.6250,,,,1,,,1
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,g1,15.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,60.63,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,1
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,g2,45.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,60.63,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,1
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,g3,90.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.63,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,1
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,g4,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.63,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,1
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,g5,15.00,SetZ2Blinds=ON,SetZ2Blinds=ON,0,0,60.00,60.63,60.00,60.00,SetZ2Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,g6,300.00,SetZ2Blinds=ON,SetZ2Blinds=ON,1,1,60.00,60.63,60.00,65.00,SetZ2Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,DELAY:SetZ1Blinds=ON,,delayed,delayed,,,60.6250,60.6250,,,,1,,,1
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,DELAY:SetZ1Light=ON,,instantaneous,instantaneous,,,5.6250,5.0000,,,,1,,,0
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,DELAY:SetZ2Blinds=ON,,delayed,delayed,,,60.0000,60.6250,,,,1,,,0
+dynamics-lab2_slow-ql_false-rep-2,lab2_slow,ql_false,2,DELAY:SetZ2Light=ON,,instantaneous,instantaneous,,,6.2500,5.6250,,,,1,,,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,g1,15.00,SetZ1Light=ON,SetZ1Light=ON,1,1,6.25,5.00,5.00,5.00,SetZ1Light=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,g2,45.00,SetZ1Light=ON,SetZ1Light=ON,1,1,6.25,5.00,5.00,10.00,SetZ1Light=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,g3,90.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,g4,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.63,65.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,g5,15.00,SetZ2Light=ON,SetZ2Light=ON,1,1,5.00,5.63,5.00,5.00,SetZ2Light=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,g6,300.00,SetZ2Blinds=ON,SetZ2Blinds=ON,1,1,60.63,60.00,60.00,60.00,SetZ2Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,DELAY:SetZ1Blinds=ON,,delayed,delayed,,,60.0000,60.6250,,,,1,,,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,DELAY:SetZ1Light=ON,,instantaneous,instantaneous,,,6.2500,5.0000,,,,1,,,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,DELAY:SetZ2Blinds=ON,,delayed,delayed,,,60.6250,60.0000,,,,1,,,0
+dynamics-lab2_slow-ql_true-rep-1,lab2_slow,ql_true,1,DELAY:SetZ2Light=ON,,instantaneous,instantaneous,,,5.0000,5.6250,,,,1,,,0
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,g1,15.00,SetZ1Light=ON,SetZ1Light=ON,1,1,5.63,6.25,5.00,10.00,SetZ1Light=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,g2,45.00,SetZ1Light=ON,SetZ1Light=ON,1,1,5.63,6.25,20.00,5.00,SetZ1Light=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,g3,90.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.00,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,1
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,g4,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.00,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,1
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,g5,15.00,SetZ2Light=ON,SetZ2Light=ON,1,1,6.25,5.63,10.00,5.00,SetZ2Light=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,g6,300.00,SetZ2Blinds=ON,SetZ2Blinds=ON,1,1,61.25,60.00,60.00,60.00,SetZ2Blinds=ON x10,1,1,1,0
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,DELAY:SetZ1Blinds=ON,,delayed,delayed,,,60.0000,60.0000,,,,1,,,1
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,DELAY:SetZ1Light=ON,,instantaneous,instantaneous,,,5.6250,6.2500,,,,1,,,0
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,DELAY:SetZ2Blinds=ON,,delayed,delayed,,,61.2500,60.0000,,,,1,,,0
+dynamics-lab2_slow-ql_true-rep-2,lab2_slow,ql_true,2,DELAY:SetZ2Light=ON,,instantaneous,instantaneous,,,6.2500,5.6250,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,g1,15.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,g2,45.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,g3,90.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,g4,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,g5,15.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,g6,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,DELAY:SetSpotlight=ON,,instantaneous,instantaneous,,,5.6250,6.2500,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,DELAY:SetZ1Blinds=ON,,delayed,delayed,,,60.0000,60.6250,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,DELAY:SetZ1Light=ON,,instantaneous,instantaneous,,,5.6250,5.6250,,,,1,,,1
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,DELAY:SetZ2Blinds=ON,,delayed,delayed,,,60.0000,61.8750,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-1,lab3_slow,ql_false,1,DELAY:SetZ2Light=ON,,instantaneous,instantaneous,,,5.6250,5.0000,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,g1,15.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,61.25,60.00,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,g2,45.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,61.25,60.00,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,g3,90.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,61.25,60.00,60.00,65.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,g4,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,61.25,60.00,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,g5,15.00,SetZ1Blinds=ON,SetZ1Blinds=ON,0,0,61.25,60.00,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,g6,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,61.25,60.00,60.00,60.00,SetZ1Blinds=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,DELAY:SetSpotlight=ON,,instantaneous,instantaneous,,,5.6250,6.2500,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,DELAY:SetZ1Blinds=ON,,delayed,delayed,,,61.2500,60.0000,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,DELAY:SetZ1Light=ON,,instantaneous,instantaneous,,,5.6250,6.2500,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,DELAY:SetZ2Blinds=ON,,delayed,delayed,,,61.2500,60.6250,,,,1,,,0
+dynamics-lab3_slow-ql_false-rep-2,lab3_slow,ql_false,2,DELAY:SetZ2Light=ON,,instantaneous,instantaneous,,,5.6250,5.6250,,,,1,,,1
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,g1,15.00,SetZ1Light=ON,SetZ1Light=ON,1,1,6.88,5.00,5.00,5.00,SetZ1Light=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,g2,45.00,SetZ1Light=ON,SetZ1Light=ON,1,1,6.88,5.00,5.00,5.00,SetZ1Light=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,g3,90.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x7; SetZ2Blinds=ON x3,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,g4,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x7; SetZ2Blinds=ON x3,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,g5,15.00,SetZ2Light=ON,SetZ2Light=ON,1,1,6.88,5.63,5.00,5.00,SetZ2Light=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,g6,300.00,SetZ1Blinds=ON,SetZ1Blinds=ON,1,1,60.00,60.63,60.00,60.00,SetZ1Blinds=ON x7; SetZ2Blinds=ON x3,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,DELAY:SetSpotlight=ON,,instantaneous,instantaneous,,,5.6250,5.0000,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,DELAY:SetZ1Blinds=ON,,delayed,delayed,,,60.0000,60.6250,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,DELAY:SetZ1Light=ON,,instantaneous,instantaneous,,,6.8750,5.0000,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,DELAY:SetZ2Blinds=ON,,delayed,delayed,,,61.2500,60.6250,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-1,lab3_slow,ql_true,1,DELAY:SetZ2Light=ON,,instantaneous,instantaneous,,,6.8750,5.6250,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,g1,15.00,SetZ1Light=ON,SetZ1Light=ON,1,1,6.25,5.00,10.00,5.00,SetZ1Light=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,g2,45.00,SetZ1Light=ON,SetZ1Light=ON,1,1,6.25,5.00,5.00,5.00,SetZ1Light=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,g3,90.00,SetZ1Blinds=ON,SetZ2Blinds=ON,1,1,60.00,60.00,60.00,60.00,SetZ1Blinds=ON x7; SetZ2Blinds=ON x3,0,1,1,1
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,g4,300.00,SetZ1Blinds=ON,SetZ2Blinds=ON,1,1,60.00,60.00,60.00,60.00,SetZ1Blinds=ON x7; SetZ2Blinds=ON x3,0,1,1,1
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,g5,15.00,SetZ2Light=ON,SetZ2Light=ON,1,1,5.63,5.00,5.00,5.00,SetZ2Light=ON x10,1,1,1,0
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,g6,300.00,SetZ1Blinds=ON,SetZ2Blinds=ON,1,1,60.00,60.00,60.00,60.00,SetZ1Blinds=ON x7; SetZ2Blinds=ON x3,0,1,1,1
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,DELAY:SetSpotlight=ON,,instantaneous,instantaneous,,,7.5000,5.0000,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,DELAY:SetZ1Blinds=ON,,delayed,delayed,,,60.0000,60.6250,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,DELAY:SetZ1Light=ON,,instantaneous,instantaneous,,,6.2500,5.0000,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,DELAY:SetZ2Blinds=ON,,delayed,delayed,,,60.6250,60.0000,,,,1,,,0
+dynamics-lab3_slow-ql_true-rep-2,lab3_slow,ql_true,2,DELAY:SetZ2Light=ON,,instantaneous,instantaneous,,,5.6250,5.0000,,,,1,,,0

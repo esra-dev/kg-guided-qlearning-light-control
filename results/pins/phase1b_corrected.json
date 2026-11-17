@@ -1,0 +1,204 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase1b_corrected",
+  "archive": "results/phase1b_corrected",
+  "role": "accepted",
+  "phase": "1b",
+  "description": "Phase 1b confirmatory campaign: four modes in eight seed-half runs (dispatch head c8e14a4b).",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase1.yml",
+    "all_runs": {
+      "head_sha": "c8e14a4bca3ac0befbdb134579dec420fd3c60e2",
+      "profiles": [
+        "labrel0",
+        "labrel4",
+        "labrel8",
+        "labrel16",
+        "labrel8s",
+        "labband",
+        "lab4chain3"
+      ],
+      "publish_results": true,
+      "ref": "refs/heads/phase1b-labs-2026-07",
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "30199243656": {
+        "run_mode": "phase1b_v2_baseline",
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "30199247467": {
+        "run_mode": "phase1b_v2_baseline",
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      },
+      "30199251189": {
+        "run_mode": "phase1b_v2_redundancy_only",
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "30199254246": {
+        "run_mode": "phase1b_v2_redundancy_only",
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      },
+      "30199257204": {
+        "run_mode": "phase1b_v2_kg_frozen",
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "30199260042": {
+        "run_mode": "phase1b_v2_kg_frozen",
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      },
+      "30199263213": {
+        "run_mode": "phase1b_v2_extended",
+        "seeds": {
+          "int_range": [
+            1,
+            10
+          ]
+        }
+      },
+      "30199266427": {
+        "run_mode": "phase1b_v2_extended",
+        "seeds": {
+          "int_range": [
+            11,
+            20
+          ]
+        }
+      }
+    }
+  },
+  "tables": [
+    {
+      "file": "analysis/registered/phase1b_registered_family.csv",
+      "key": [
+        "member"
+      ],
+      "rows": [
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6"
+      ],
+      "all_rows": {
+        "n_paired": "20",
+        "p_signflip_two_sided": {
+          "probability": true
+        }
+      },
+      "row_values": {
+        "M1": {
+          "mean_paired_statistic": {
+            "float": 9.88095238095e-06
+          },
+          "bh_family_m": "5",
+          "q_signflip_bh": {
+            "probability": true
+          }
+        },
+        "M2": {
+          "mean_paired_statistic": {
+            "float": 0.0
+          },
+          "bh_family_m": "5",
+          "q_signflip_bh": {
+            "probability": true
+          }
+        },
+        "M3": {
+          "mean_paired_statistic": {
+            "float": 0.0013
+          },
+          "bh_family_m": "5",
+          "q_signflip_bh": {
+            "probability": true
+          }
+        },
+        "M4": {
+          "mean_paired_statistic": {
+            "float": 0.0
+          },
+          "bh_family_m": "5",
+          "q_signflip_bh": {
+            "probability": true
+          }
+        },
+        "M5": {
+          "mean_paired_statistic": {
+            "float": -0.1625
+          },
+          "bh_family_m": "exploratory"
+        },
+        "M6": {
+          "mean_paired_statistic": {
+            "float": -0.5
+          },
+          "bh_family_m": "5",
+          "q_signflip_bh": {
+            "probability": true
+          }
+        }
+      }
+    }
+  ],
+  "inventories": {
+    "files": [
+      {
+        "glob": "run_*/SHA256SUMS.csv",
+        "base": "."
+      },
+      {
+        "glob": "run_*/analysis/out/SHA256SUMS.csv",
+        "base": "../.."
+      }
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase1b.py",
+      "{archive}"
+    ],
+    "data": "local",
+    "requires": [
+      "{archive}/run_*/benchmark/results_seed*/*/training_stereo_*/qtable_*.csv",
+      "{archive}/run_*/benchmark/results_seed*/*/*/benchmark_results_*.csv"
+    ],
+    "approx_seconds": 330,
+    "note": "Needs the ignored per-cell benchmark and Q-table files (about 650 MB)."
+  }
+}

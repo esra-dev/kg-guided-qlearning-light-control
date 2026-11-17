@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kg-ql/run_config.schema.json",
+  "title": "KG-QL Run Config",
+  "type": "object",
+  "required": ["profiles", "profiles_to_run", "stereo_modes", "bench_modes",
+               "simulator_port_map", "simulator_flow_map", "qtable_suffix_map",
+               "expected_state_vec_dim"],
+  "properties": {
+    "description": { "type": "string" },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["tick", "num_episodes", "max_steps_per_episode",
+                     "action_delay_ms", "exec_delay_ms_ql", "exec_max_steps_ql",
+                     "bench_runs", "exec_max_steps_bench", "exec_delay_ms_bench"],
+        "properties": {
+          "tick":                  { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$" },
+          "num_episodes":          { "type": "integer", "minimum": 0 },
+          "max_steps_per_episode": { "type": "integer", "minimum": 0 },
+          "action_delay_ms":       { "type": "integer", "minimum": 0 },
+          "exec_delay_ms_ql":      { "type": "integer", "minimum": 0 },
+          "exec_max_steps_ql":     { "type": "integer", "minimum": 0 },
+          "bench_runs":            { "type": "integer", "minimum": 0 },
+          "exec_max_steps_bench":  { "type": "integer", "minimum": 0 },
+          "exec_delay_ms_bench":   { "type": "integer", "minimum": 0 },
+          "note":                  { "type": "string" },
+          "protocol_version":      { "enum": ["phase1-v2"] },
+          "metric_schema":         { "enum": ["phase1-benchmark-v2"] },
+          "policy_energy_weights": { "type": "string",
+                                     "pattern": "^([a-z0-9_]+:[0-9]+(\\.[0-9]+)?)(,[a-z0-9_]+:[0-9]+(\\.[0-9]+)?)*$" },
+          "learning_overrides":    {
+            "type": "object",
+            "properties": {
+              "reward_clip":                 { "type": "number" },
+              "stereo_prior_scale":          { "type": "number" },
+              "stereo_prior_decay_episodes": { "type": "integer", "minimum": 0 },
+              "stereo_prior_decay_floor":    { "type": "number" },
+              "stereo_prior_redundant":      { "type": "number" },
+              "stereo_prior_iv_unsat":       { "type": "number" },
+              "stereo_redundancy_only":      { "type": "boolean" },
+              "stereo_knowledge_layer":      { "enum": ["full", "brick", "redundancy"] },
+              "stereo_init_bonus":           { "type": "number" },
+              "cross_zone_bonus":            { "type": "number" },
+              "stereo_energy_prior_weight":  { "type": "number" },
+              "stereo_irrelevant_dv_prior":  { "type": "number" },
+              "stereo_band_mirror_init":     { "type": "number" },
+              "stereo_band_mirror_prior":    { "type": "number" },
+              "reward_shaping":              { "enum": ["none", "pbrs"] },
+              "adaptive_trust":              { "type": "boolean" },
+              "adaptive_trust_min_samples":  { "type": "integer", "minimum": 0 },
+              "adaptive_trust_floor":        { "type": "number" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "profiles_to_run":     { "type": "array", "items": { "type": "string" } },
+    "stereo_modes":        { "type": "array", "items": { "enum": ["true", "false"] } },
+    "bench_modes":         { "type": "array", "items": { "enum": ["rule_based", "ql_false", "ql_true"] } },
+    "simulator_port_map":  { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+    "simulator_flow_map":  { "type": "object", "additionalProperties": { "type": "string" } },
+    "qtable_suffix_map":   { "type": "object", "additionalProperties": { "type": "string" } },
+    "expected_state_vec_dim": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+    "http_client": {
+      "type": "object",
+      "properties": {
+        "connect_timeout_ms":  { "type": "integer", "minimum": 0 },
+        "response_timeout_ms": { "type": "integer", "minimum": 0 },
+        "max_retries":         { "type": "integer", "minimum": 0 },
+        "backoff_base_ms":     { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "dry_run": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

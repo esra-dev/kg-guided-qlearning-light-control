@@ -1,0 +1,60 @@
+{
+  "schema": "thesis-pins-v1",
+  "campaign": "phase3_v2_corrected",
+  "archive": "results/phase3_v2_corrected",
+  "role": "accepted",
+  "phase": "3",
+  "description": "Phase 3 corrected campaign (protocol phase3-v2): one run, two slow profiles.",
+  "required_files": [
+    "CAMPAIGN_MANIFEST.md"
+  ],
+  "receipts": {
+    "file": "run_{run_id}/analysis/out/workflow_inputs.json",
+    "workflow_actual": ".github/workflows/phase3.yml",
+    "workflow_note": "Every archived workflow_inputs.json of this campaign records \".github/workflows/phase1.yml\", although the runs were dispatched through workflow_actual (named in each run's ARCHIVE_MANIFEST.md). The receipt value is pinned as it is.",
+    "all_runs": {
+      "head_sha": "90e53f8b087fc390a7ad51a0187b81c89c21c64e",
+      "profiles": [
+        "lab2_slow",
+        "lab3_slow"
+      ],
+      "publish_results": true,
+      "ref": "refs/heads/phase234-correction-2026-07-22",
+      "run_mode": "phase3-v2",
+      "seeds": {
+        "int_range": [
+          1,
+          10
+        ]
+      },
+      "workflow": ".github/workflows/phase1.yml"
+    },
+    "runs": {
+      "29926328852": {}
+    }
+  },
+  "inventories": {
+    "files": [
+      {
+        "glob": "run_*/SHA256SUMS.csv",
+        "base": "."
+      }
+    ],
+    "lf_committed": [
+      "run_29926328852/analysis/out/phase3_compliance_ci.csv",
+      "run_29926328852/analysis/out/phase3_compliance_paired.csv",
+      "run_29926328852/analysis/out/phase3_delay_accuracy.csv"
+    ]
+  },
+  "reproducer": {
+    "argv": [
+      "analysis/reproduce_phase3_v2.py",
+      "{archive}"
+    ],
+    "data": "tracked",
+    "requires": [
+      "{archive}/run_*/dynamics_root/rep*/timebounded_results_*.csv"
+    ],
+    "approx_seconds": 45
+  }
+}

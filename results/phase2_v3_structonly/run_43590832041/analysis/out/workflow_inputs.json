@@ -1,0 +1,37 @@
+{
+  "head_sha": "b5bf2146d5f45d0a73b1c2905d38d347ead555e0",
+  "knowledge_layer": "brick",
+  "profiles": [
+    "lab2_f1bdead",
+    "lab3_f1bdead",
+    "lab3_f2dead_lowsun",
+    "labmon2_f2dead_lowsun"
+  ],
+  "publish_results": true,
+  "ref": "refs/heads/phase2-structonly-2026-11",
+  "run_id": 43590832041,
+  "run_mode": "phase1_v2_kg_only",
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "workflow": ".github/workflows/phase1.yml"
+}

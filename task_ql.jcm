@@ -1,0 +1,32 @@
+/*
+  KG-QL: Q-Learning Illuminance Controller Agent
+
+  JaCaMo project file for the Gradle task "taskQl".
+
+  Starts one BDI agent, illuminance_controller_agent_ql
+  (src/agt/illuminance_controller_agent_ql.asl), which trains a tabular
+  Q-learning policy for the lamps and blinds of the lab selected by the active
+  profile (profiles are defined in src/agt/lab_profiles.asl). The Q-table and
+  the training logs are written to files at the end of training; the benchmark
+  agent (task_bench.jcm) later evaluates the stored Q-table.
+
+  To run: ./gradlew taskQl -Pprofile=<profile id>
+          (while the Node-RED simulator flow of that profile is running; the
+          port of each lab is the sim_port in lab_profiles.asl, for example
+          1881 for the custom lab)
+
+  Options:
+    -Pprofile=<id>   Lab profile; passed as the system property active.profile.
+                     Without it the active_profile belief of the agent is used.
+    use_stereotypes  Knowledge-guided (true) or plain (false) Q-learning is
+                     chosen by the belief use_stereotypes(true/false) in
+                     illuminance_controller_agent_ql.asl. For a single manual
+                     run edit that belief; the full-run script
+                     run_full_project.ps1 rewrites it for each arm.
+*/
+
+mas lab_ql {
+
+    agent illuminance_controller_agent_ql
+
+}
